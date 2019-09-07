@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Admin » Accounts</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.css" integrity="sha256-CNwnGWPO03a1kOlAsGaH5g8P3dFaqFqqGFV/1nkX5OU=" crossorigin="anonymous">
+    <script src="//code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha256-3edrmyuQ0w65f8gfBsqowzjJe2iM6n0nKciPUp8y+7E=" crossorigin="anonymous"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.bundle.min.js" integrity="sha384-feJI7QwhOS+hwpX2zkaeJQjeiwlhOP+SdQDqhgvvo1DsjtiSQByFdThsxO669S2D" crossorigin="anonymous"></script>
+    <style>
+    table {
+      font-size: 14px;
+    }
+    td {
+      white-space: nowrap;
+    }
+    .avatar {
+      background-color: #fafafa;
+      background-position: 50% 50%;
+      background-size: cover;
+      border-radius: 9999px;
+      object-fit: cover;
+      position: relative;
+      transition: transform 200ms;
+      z-index: 1;
+    }
+    .avatar:hover {
+      transform: scale(6);
+      z-index: 2;
+    }
+    .metadata code {
+      display: block;
+    }
+    .metadata span ~ span:before {
+      color: #aaa;
+      content: "| ";
+    }
+    .not-active {
+      color: #aaa;
+    }
+    .premium a {
+      color: #a80;
+      text-shadow: #ff0 0 0 10px;
+    }
+    .premium img {
+      box-shadow: #ff0 0 0 10px;
+    }
+    .verified a {
+      color: #08f;
+      text-shadow: #12bdff 0 0 10px;
+    }
+    .verified img {
+      box-shadow: #12bdff 0 0 10px;
+    }
+    .last-active.hour, .last-active.day {
+      font-weight: bold;
+    }
+    .last-active.hour, .last-active.day, .last-active.week {
+      color: #0c0;
+    }
+    .last-active.year, .last-active.old {
+      color: #6c757d;
+    }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <nav aria-label="breadcrumb" class="mt-5">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/admin/">Admin</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Accounts</li>
+        </ol>
+      </nav>
+      <h1 class="display-4">Accounts</h1>
+      <p class="lead">Create accounts and see recently created accounts here.</p>
+      <h2>Create accounts</h2>
+      <form class="form-horizontal" id="create-form">
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">User to create/find</label>
+          <div class="col-sm-3">
+            <input class="form-control" id="create-username" placeholder="username">
+          </div>
+          <div class="col-sm-2">
+            <p class="form-text" id="create-status">...</p>
+          </div>
+          <div class="col-sm-5">
+            <div class="input-group">
+              <div class="input-group-prepend">
+                <span class="input-group-text" id="create-image" style="background: #fafafa; background-position: 50% 50%; background-size: cover; width: 43px;">&nbsp;</span>
+              </div>
+              <input class="form-control" disabled id="create-image-file" type="file" accept="image/*">
+            </div>
+          </div>
+        </div>
+        <div class="form-group row">
+          <div class="offset-sm-2 col-sm-10">
+            <div class="checkbox">
+              <label><input id="create-unclaimed" type="checkbox" value="true"> Unclaimed artist page</label>
+            </div>
+          </div>
+        </div>
+        <div class="form-group row">
+          <div class="offset-sm-2 col-sm-10">
+            <button class="btn btn-success" disabled id="create-button" type="submit">Create</button>
+          </div>
+        </div>
+        <div class="form-group row">
+          <div class="offset-sm-2 col-sm-10">
+            <p class="form-text" id="create-list"></p>
+          </div>
+        </div>
+      </form>
+      <script>
+      const createForm = document.getElementById('create-form'),
+            createUsername = document.getElementById('create-username'),
+            createStatus = document.getElementById('create-status'),
+            createImage = document.getElementById('create-image'),
+            createImageFile = document.getElementById('create-image-file'),
+            createUnclaimed = document.getElementById('create-unclaimed'),
+            createButton = document.getElementById('create-button'),
+            createList = document.getElementById('create-list');
+      let createAccountData = null;
+      let remoteImage, remoteImageName, remoteImageURL, remoteDisplayName;
+      createUsername.addEventListener('keyup', (e) => {
+        const identifier = createUsername.value.trim().toLowerCase();
+        if (!identifier.match(/^[a-z][a-z0-9_.-]*$/)) {
+          createUsername.parentNode.classList.add('has-error');
+          createStatus.textContent = '...';
+          createImage.style.backgroundImage = remoteImageURL ? 'url(' + remoteImageURL + ')' : null;
+          createImageFile.disabled = true;
+          return;
+        }
+        createUsername.parentNode.classList.add('has-error');
+        fetch(`/admin/account.json?identifier=${escape(identifier)}`, {credentials: 'include'})
+          .then(r => r.json())
+          .then(data => {
+            createUsername.parentNode.classList.remove('has-error');
+            createImageFile.disabled = false;
+            createButton.disabled = false;
+            if (!data || !data.id) {
+              createAccountData = null;
+              createImage.style.backgroundImage = remoteImageURL ? 'url(' + remoteImageURL + ')' : null;
+              createStatus.innerHTML = '<em>new</em>';
+              return;
+            }
+            createAccountData = data;
+            createStatus.innerHTML = `<a href="/admin/accounts/${data.id}/" target="_blank">${data.status}</a>`;
+            createImage.style.backgroundImage = 'url(' + data.image_url + ')';
+            remoteDisplayName = null;
+            remoteImage = remoteImageURL = remoteImageName = null;
+          });
+      });
+      createImageFile.addEventListener('change', (e) => {
+        remoteImage = remoteImageURL = remoteImageName = null;
+        const file = createImageFile.files[0];
+        if (!file) {
+          if (createAccountData) {
+            createImage.style.backgroundImage = 'url(' + createAccountData.image_url + ')';
+          } else {
+            createImage.style.backgroundImage = '';
+          }
+          return;
+        }
+        const url = URL.createObjectURL(createImageFile.files[0]);
+        createImage.style.backgroundImage = 'url(' + url + ')';
+      });
+      createForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        createUsername.disabled = true;
+        createButton.disabled = true;
+        const form = new FormData();
+        form.set('identifier', createUsername.value);
+        form.set('status', createUnclaimed.checked ? 'unclaimed' : 'active');
+        const file = createImageFile.files[0];
+        if (remoteImage) {
+          form.set('image', remoteImage, remoteImageName);
+        } else if (file) {
+          form.set('image', file);
+        }
+        fetch(`${location.pathname}create.json`, {credentials: 'include', body: form, method: 'POST'})
+          .then(r => r.json())
+          .then(data => {
+            createUsername.disabled = false;
+            createUsername.focus();
+            createList.innerHTML += `<img class="avatar" src="${data.image_url}" width="20" height="20"> <a href="/admin/accounts/${data.id}/" target="_blank">@${data.username}</a><br>`;
+            if (data.was_roger_account) {
+              alert(
+                'The account you just invited used to be a Roger account. ' +
+                'Their account is now a fika.io account but you may want to ' +
+                'clean up the recents etc.');
+            }
+          });
+        remoteDisplayName = null;
+        remoteImage = remoteImageName = remoteImageURL = null;
+        createUsername.value = '';
+        createAccountData = null;
+        createImage.style.backgroundImage = '';
+        createImageFile.value = null;
+        createStatus.innerHTML = '<em>new</em>';
+      });
+      </script>
+      {% if sort == 'quality' %}
+      <h2>Highest quality accounts</h2>
+      <p>You can also <a href="/admin/accounts/?sort=recent">sort by recently created</a>.</p>
+      {% elif sort == 'recent' %}
+      <h2>Recently created accounts</h2>
+      <p>You can also <a href="/admin/accounts/?sort=quality">sort by highest quality</a>.</p>
+      {% endif %}
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th width="280">Username</th>
+            <th class="text-right" width="65">#REA</th>
+            <th class="text-right" width="65">#SUB</th>
+            <th>Metadata</th>
+            <th width="230">Signed up</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for handler in handlers %}
+          <tr class="{% if not handler.is_active %}not-active{% endif %} {% if handler.premium %}premium{% endif %} {% if handler.verified %}verified{% endif %}">
+            <td>
+              {{handler.account|emoji}}
+              {% if handler.image_url %}
+              <img class="avatar" src="{{handler.image_url or ''}}" width="20" height="20">
+              {% endif %}
+              <a href="/admin/accounts/{{handler.account_id}}/">{{handler.username or handler.account_id}}</a>
+              <br>
+              <span class="last-active {{handler.last_active|freshness}}" title="{{handler.last_active}}">Active {{handler.last_active|deltafromnow|pretty(timedelta_date_only=True)}} ago</span>
+            </td>
+            <td class="text-right"><a href="/admin/content/list/reaction/?by={{handler.account_id}}">{{handler.content_count|pretty}}</a></td>
+            <td class="text-right">
+              <span title="subscribers">{{handler.follower_count|pretty}}</span><br>
+              <span title="subscribing">{{handler.following_count|pretty}}</span>
+            </td>
+            <td class="text-truncate metadata">
+              {% if handler.location_info %}<span>{{handler.location_info.city}}, {{handler.location_info.country}}</span>{% endif %}
+              {% if handler.birthday %}<span>{{handler.birthday|years_ago}} y/o</span>{% endif %}
+              {% if handler.gender %}<span>{{handler.gender}}</span>{% endif %}
+              {% for svc in handler.filter_services('facebook') %}<span><a href="https://www.facebook.com/{{svc.resource}}" target="_blank"><img src="/admin/static/fb.svg" width="16" height="16" style="vertical-align: text-bottom;"></a></span>{% endfor %}
+              {% if handler.youtube_channel_id %}<span><a href="https://www.youtube.com/channel/{{handler.youtube_channel_id}}" target="_blank"><img src="/admin/static/yt.svg" width="16" height="16" style="vertical-align: text-bottom;" title="{{handler.youtube_channel_title}}{% if handler.youtube_subs %} ({{handler.youtube_subs|pretty}} subs){% endif %}"></a>{% if handler.youtube_subs %} {{handler.youtube_subs|pretty}}{% endif %}</span>{% endif %}
+              <code>{{handler.last_active_client}}</code>
+            </td>
+            <td>{{handler.created}}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p>
+        {% if cursor %}
+        <a class="btn btn-primary" href="/admin/accounts/?cursor={{cursor}}&sort={{sort}}">Next</a>
+        {% else %}
+        <a class="btn btn-primary" href="/admin/accounts/?sort={{sort}}">First page</a>
+        {% endif %}
+      </p>
+    </main>
+  </body>
+</html>

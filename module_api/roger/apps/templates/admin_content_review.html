@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Admin » Content » Review</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <style>
+    #chat-status {
+      background: rgba(255, 255, 255, .8);
+      padding: 4px 2px;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    span.video {
+      display: inline-block;
+      position: relative;
+    }
+    span.video a.youtube {
+      bottom: 5px;
+      color: #fff;
+      font-size: 10px;
+      font-weight: bold;
+      left: 2px;
+      position: absolute;
+      text-shadow: 0 1px 2px #000;
+    }
+    span.video a.youtube:hover {
+      color: #ff0;
+      text-decoration: none;
+    }
+    span.video a.youtube small {
+      font-weight: 300;
+    }
+    td.creator {
+      white-space: nowrap;
+      width: 146px;
+    }
+    td.creator a {
+      display: inline-block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 130px;
+    }
+    td.creator small {
+      background: rgba(0, 0, 0, .3);
+      border-radius: 3px;
+      color: #fff;
+      display: inline-block;
+      font-weight: 300;
+      padding: 2px 4px;
+      text-shadow: 0 1px 1px #000;
+    }
+    td.creator small a {
+      color: #fff;
+      font-weight: 500;
+    }
+    td.creator small a:hover {
+      color: #ff0;
+      text-decoration: none;
+    }
+    td.creator small img {
+      vertical-align: baseline;
+    }
+    td img.thumb {
+      background: #f00;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 4px;
+      min-height: 115px;
+      min-width: 10px;
+      opacity: 1;
+      transition: height .3s, opacity .3s;
+    }
+    td img.thumb.error {
+      opacity: .1;
+    }
+    td img.thumb.published {
+      opacity: 1;
+    }
+    td img.thumb.repost {
+      box-shadow: #f80 0 0 0 5px;
+    }
+    tr {
+      transition: background-color .3s;
+    }
+    tr.error {
+      background-color: #ff8 !important;
+    }
+    tr.quality-0 img.thumb, tr.quality-1 img.thumb {
+      opacity: .5;
+    }
+    tr.quality-0, tr.quality-1 {
+      background-color: #fbb !important;
+    }
+    tr.quality-0 td.vote, tr.quality-1 td.vote {
+      background-color: #fbb !important;
+      /*font-size: 13px;*/
+    }
+    tr.quality-0 img.avatar, tr.quality-1 img.avatar {
+      /*height: 50px;*/
+      /*width: 50px;*/
+    }
+    tr.quality-0 img.thumb, tr.quality-1 img.thumb {
+      /*height: 50px;*/
+      /*min-height: 50px;*/
+    }
+    tr.quality-2, tr.quality-3, tr.quality-4 {
+      background-color: #bfb !important;
+      opacity: .8;
+    }
+    tr td.vote {
+      font-size: 24px;
+      line-height: 1.1 !important;
+      text-align: center;
+      transition: filter .3s, font-size .3s, opacity .3s;
+      width: 40px;
+    }
+    video {
+      background: rgba(0, 0, 0, .3);
+      height: 200px;
+      transition: width .2s, height .2s;
+      width: 300px;
+    }
+    video:hover {
+      height: 400px;
+      width: 600px;
+    }
+    .avatar {
+      background-color: #fafafa;
+      background-position: 50% 50%;
+      background-size: cover;
+      border-radius: 9999px;
+      object-fit: cover;
+      position: relative;
+      transition: transform 200ms;
+      z-index: 1;
+    }
+    .avatar:hover {
+      transform: scale(2);
+      z-index: 2;
+    }
+    small .avatar:hover {
+      transform: scale(6);
+    }
+    .quality-0 a[data-quality],
+    .quality-1 a[data-quality],
+    .quality-2 a[data-quality],
+    .quality-3 a[data-quality],
+    .quality-4 a[data-quality]
+    {
+      filter: grayscale();
+    }
+    .quality-0 a[data-quality="0"],
+    .quality-1 a[data-quality="1"],
+    .quality-2 a[data-quality="2"],
+    .quality-3 a[data-quality="3"],
+    .quality-4 a[data-quality="4"]
+    {
+      filter: unset;
+    }
+    tr.unrated, tr.quality-0, tr.quality-1, tr.quality-2, tr.quality-3, tr.quality-4 {
+      display: none;
+    }
+    .unrated-filter tr.unrated,
+    .quality-0-filter tr.quality-0,
+    .quality-1-filter tr.quality-1,
+    .quality-2-filter tr.quality-2,
+    .quality-3-filter tr.quality-3,
+    .quality-4-filter tr.quality-4
+    {
+      display: table-row;
+    }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-12">
+          <h1><a href="/admin/">Admin</a> » Content » Review</h1>
+          <p id="chat-status"><strong>Initializing...</strong></p>
+          <form>
+            <label><input checked name="filter" type="checkbox" value="unrated-filter"> ❓</label>
+            <label><input checked name="filter" type="checkbox" value="quality-0-filter"> 1️⃣</label>
+            <label><input checked name="filter" type="checkbox" value="quality-1-filter"> 2️⃣</label>
+            <label><input checked name="filter" type="checkbox" value="quality-2-filter"> 3️⃣</label>
+            <label><input checked name="filter" type="checkbox" value="quality-3-filter"> 4️⃣</label>
+            <label><input checked name="filter" type="checkbox" value="quality-4-filter"> 🤩</label>
+          </form>
+          <script>
+            const filters = document.getElementsByName('filter');
+            for (const filter of filters) {
+              const toggle = () => document.body.classList.toggle(filter.value, filter.checked);
+              filter.addEventListener('click', toggle);
+              toggle();
+            }
+            const channel = 'adminreview4720';
+            const chatStatus = document.getElementById('chat-status');
+            const others = [];
+            let ws = null, timer;
+            const chat = {
+              connect() {
+                chat.disconnect();
+                ws = new WebSocket('wss://chat.reaction.cam/v1/channel');
+                ws.onclose = chat.onClose;
+                ws.onerror = chat.onError;
+                ws.onmessage = chat.onMessage;
+                ws.onopen = chat.onOpen;
+              },
+              connectOrShowLogIn() {
+                if (localStorage.chatAccessToken) {
+                  chat.connect();
+                } else {
+                  chat.showLogIn();
+                }
+              },
+              disconnect() {
+                others.length = 0;
+                if (!ws) return;
+                ws.onclose = null;
+                ws.onerror = null;
+                ws.onmessage = null;
+                ws.onopen = null;
+                ws.close();
+                ws = null;
+                if (localStorage.chatAccessToken) {
+                  chatStatus.innerHTML = '<strong>Disconnected.</strong> <button onclick="chat.connect();">Reconnect</button> <button onclick="chat.showLogIn();">Change login</button>';
+                } else {
+                  chatStatus.innerHTML = '<strong>Disconnected.</strong> <button onclick="chat.showLogIn();">Log in</button>';
+                }
+              },
+              logIn(formData) {
+                const p = fetch('https://api.reaction.cam/oauth2/token?grant_type=password', {
+                  method: 'POST',
+                  body: formData,
+                });
+                return p.then(r => {
+                  if (r.status != 200) throw new Error('Could not log in');
+                  return r.json();
+                });
+              },
+              logOut() {
+                localStorage.removeItem('chatAccessToken');
+                chat.disconnect();
+              },
+              onClose(e) {
+                chat.disconnect();
+                setTimeout(_ => chat.connectOrShowLogIn(), 1000);
+              },
+              onError(e) {
+                chat.disconnect();
+                chatStatus.innerHTML = '<strong>Error!</strong>';
+              },
+              onMessage(e) {
+                let i = e.data.indexOf(' '), j = e.data.indexOf(' ', i + 1);
+                if (i < 0 || j < 0) throw new Error('Invalid data:', e.data);
+                const from = e.data.substring(0, i);
+                const senderIndex = others.findIndex(o => o.id.toString() == from);
+                const sender = senderIndex > -1 ? others[senderIndex] : null;
+                const type = e.data.substring(i + 1, j)
+                const data = JSON.parse(e.data.substring(j + 1));
+                switch (type) {
+                case 'channel':
+                  if (data.id != channel) break;
+                  others.length = 0;
+                  for (const o of data.others) {
+                    others.push(o);
+                  }
+                  chat.showOthers();
+                  break;
+                case 'join':
+                  if (data.channel_id != channel) break;
+                  if (sender) break;
+                  others.push(data.account);
+                  chat.showOthers();
+                  break;
+                case 'leave':
+                  if (data.channel_id != channel) break;
+                  if (!sender) break;
+                  others.splice(senderIndex, 1);
+                  chat.showOthers();
+                  break;
+                case 'text':
+                  console.log(`@${sender ? sender.username : 'you'}: ${data.text}`)
+                  console.log(data.type || 'text', data.data || {});
+                  if (sender && data.type == 'rate') {
+                    const tr = document.getElementById(`account-${data.data.id}`);
+                    if (tr) {
+                      clearClasses(tr);
+                      tr.classList.add(`quality-${data.data.quality}`);
+                    }
+                    chat.showOthers(`@${sender.username} just put a ${data.data.emoji} rating!`);
+                    clearTimeout(timer);
+                    timer = setTimeout(_ => chat.showOthers(), 30000);
+                  }
+                  break;
+                default:
+                  console.log(from, type, data);
+                  break;
+                }
+              },
+              onOpen(e) {
+                chatStatus.innerHTML = '<strong>Connected.</strong> Authenticating...';
+                chat.send('auth', {access_token: localStorage.chatAccessToken});
+                chat.send('join', {channel_id: channel});
+              },
+              send(type, payload) {
+                if (!ws) return;
+                ws.send(`${type} ${JSON.stringify(payload)}`);
+              },
+              sendCustomText(type, text, data) {
+                chat.send('text', {to: channel, text, type, data});
+              },
+              sendText(text) {
+                chat.send('text', {to: channel, text});
+              },
+              showLogIn() {
+                chatStatus.innerHTML = '<strong>Not logged in.</strong> <form style="display: inline-block;"><input autofocus name="username" placeholder="username"> <input name="password" placeholder="password" type="password"> <button type="submit">Log in</button></form>';
+              },
+              showOthers(info = null) {
+                const usernames = others.map(o => `@${o.username}`);
+                let html = `<strong>Connected.</strong> Others: ${usernames.join(', ') || 'just you'}`;
+                if (info) html += ` • ${info}`;
+                chatStatus.innerHTML = html;
+              },
+            };
+            chatStatus.addEventListener('submit', async e => {
+              e.preventDefault();
+              e.stopPropagation();
+              chatStatus.innerHTML = '<strong>Not logged in.</strong> Logging in...';
+              const elements = Array.from(e.target.elements);
+              try {
+                const fd = new FormData(e.target);
+                elements.forEach(e => e.disabled = true);
+                const data = await chat.logIn(fd);
+                chatStatus.innerHTML = '<strong>Logged in.</strong> Connecting...';
+                localStorage.chatAccessToken = data.access_token;
+                chat.connect();
+              } catch (e) {
+                elements.forEach(e => e.disabled = false);
+                alert('Try again!');
+                chat.showLogIn();
+              }
+            });
+            document.addEventListener('visibilitychange', e => {
+              if (document.visibilityState != 'visible') return;
+              if (!ws) chat.connectOrShowLogIn();
+            });
+            chat.connectOrShowLogIn();
+          </script>
+          <table class="table table-hover">
+            <tbody>
+              {% for item in review_list %}
+              <tr class="{% if item['creator'].quality_has_been_set %}quality-{{item['creator'].quality}}{% else %}unrated{% endif %}" id="account-{{item['creator'].key.id()}}">
+                <td class="creator text-center">
+                  <img class="avatar" src="{{item['creator'].image_url}}" width="100" height="100"><br>
+                  <a href="/admin/accounts/{{item['creator'].key.id()}}/">@{{item['creator'].username}}</a>
+                  {% if item['creator'].youtube_channel_id %}
+                  <br><small>
+                  {% if item['creator'].youtube_channel_thumb_url %}<img class="avatar" src="{{item['creator'].youtube_channel_thumb_url}}" width="19" height="19">{% endif %}
+                  <a href="https://www.youtube.com/channel/{{item['creator'].youtube_channel_id}}" target="_blank" title="{{item['creator'].youtube_channel_title or 'Unknown Title'}}">
+                  {% if item['creator'].youtube_channel_title %}
+                  {{item['creator'].youtube_channel_title}}
+                  {% else %}
+                  {{item['creator'].youtube_channel_id}}
+                  {% endif %}
+                  </a>
+                  <br>
+                  {% if item['creator'].youtube_subs is none %}
+                  Subs hidden
+                  {% else %}
+                  {{item['creator'].youtube_subs|pretty}} subs
+                  {% endif %}
+                  {% if item['creator'].youtube_channel_views is not none %}
+                  • {{item['creator'].youtube_channel_views|pretty}} views
+                  {% endif %}
+                  </small>
+                  {% endif %}
+                </td>
+                <td class="vote">
+                  <a data-account="{{item['creator'].key.id()}}" data-quality="4" href="#">🤩</a><br>
+                  <a data-account="{{item['creator'].key.id()}}" data-quality="3" href="#">🚺</a><br>
+                  <a data-account="{{item['creator'].key.id()}}" data-quality="2" href="#">🚹</a><br>
+                  <a data-account="{{item['creator'].key.id()}}" data-quality="1" href="#">😐</a><br>
+                  <a data-account="{{item['creator'].key.id()}}" data-quality="0" href="#">🚼</a>
+                </td>
+                <td class="content">
+                  {% for content in item['content'] %}
+                  <span class="video">
+                    <img class="thumb{% if 'published' in content.tags %} published{% endif %}{% if 'repost' in content.tags %} repost{% endif %}" data-content="{{content.key.id()}}" data-play="{{content.video_url or ''}}" height="115" src="{{content.thumb_url or ''}}" title="{{content.created}}">
+                    {% if content.youtube_id %}
+                    <a class="youtube" href="{{content.youtube_url}}" target="_blank">
+                      {% if content.youtube_views %}<small>{{content.youtube_views|pretty}} views</small><br>{% endif %}
+                      YouTube
+                    </a>
+                    {% endif %}
+                  </span>
+                  {% endfor %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <p><a href="./?cursor={{cursor}}">Next page »</a></p>
+        </div>
+      </div>
+    </div>
+    <video autoplay controls style="position: fixed; bottom: 10px; right: 10px;"></video>
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script>
+    function clearClasses(tr) {
+      ['quality-0', 'quality-1', 'quality-2', 'quality-3', 'quality-4', 'unrated'].map(c => tr.classList.remove(c));
+    }
+    function setQuality(accountId, quality, callback) {
+      const form = new FormData();
+      form.set('set-quality', quality);
+      fetch(`/admin/accounts/${accountId}/`, {credentials: 'include', body: form, method: 'POST'})
+        .then(() => callback(true), () => callback(false));
+    }
+    function addPublished(contentId, callback) {
+      fetch(`/admin/content/add_tag.json?id=${contentId}&tag=published`, {credentials: 'include', method: 'POST'})
+        .then(() => callback(true), () => callback(false));
+    }
+    let hls;
+    document.addEventListener('click', e => {
+      if (e.target.dataset.quality) {
+        e.preventDefault();
+        const quality = parseInt(e.target.dataset.quality);
+        const emoji = e.target.textContent;
+        const row = $(e.target).closest('tr');
+        clearClasses(row[0]);
+        setQuality(e.target.dataset.account, quality, ok => {
+          row.addClass(ok ? ('quality-' + quality) : 'error');
+          if (ok) {
+            const id = parseInt(e.target.dataset.account);
+            chat.sendCustomText('rate', `Set ${id} to ${emoji}`, {id, emoji, quality});
+          }
+        });
+        row.find('[data-content]').each((_, c) => {
+          fetch(`https://bn.reaction.cam/v1/rate?id=${c.dataset.content}&rating=${quality + 1}`, {method: 'POST'});
+          if (quality < 2 || c.classList.contains('published')) return;
+          addPublished(c.dataset.content, ok => { c.classList.add(ok ? 'published' : 'error'); });
+        });
+      } else if (e.target.dataset.play) {
+        e.preventDefault();
+        const videoURL = e.target.dataset.play;
+        if (!videoURL) return;
+        const player = document.querySelector('video');
+        if (hls) hls.destroy();
+        if (videoURL.match(/\.m3u8$/)) {
+          hls = new Hls();
+          hls.loadSource(videoURL);
+          hls.attachMedia(player);
+          hls.on(Hls.Events.MANIFEST_PARSED, function () {
+            player.play();
+          });
+        } else {
+          hls = null;
+          player.src = videoURL;
+        }
+      } else if (e.target.nodeName == 'VIDEO') {
+        if (e.target.paused) {
+          e.target.play();
+        } else {
+          e.target.pause();
+        }
+      }
+    });
+    </script>
+  </body>
+</html>

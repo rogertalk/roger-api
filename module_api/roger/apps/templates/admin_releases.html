@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Releases</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="//code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha256-3edrmyuQ0w65f8gfBsqowzjJe2iM6n0nKciPUp8y+7E=" crossorigin="anonymous"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.bundle.min.js" integrity="sha384-feJI7QwhOS+hwpX2zkaeJQjeiwlhOP+SdQDqhgvvo1DsjtiSQByFdThsxO669S2D" crossorigin="anonymous"></script>
+    <style>
+    ::placeholder {
+      color: #dadada !important;
+    }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <nav aria-label="breadcrumb" class="mt-5">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/admin/">Admin</a></li>
+          <li class="breadcrumb-item">Releases</li>
+          <li class="breadcrumb-item active" aria-current="page">Create/Update</li>
+        </ol>
+      </nav>
+      <h1 class="display-4">Releases</h1>
+      <p class="lead">Update and/or create releases below by first entering the username of the artist and then following the steps.</p>
+      <h2 class="mt-4">1. Who is the artist?</h2>
+      <p>Search for an artist’s account (on REACTION.CAM). Or, create a new account below.</p>
+      <form>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label" for="account-query">Search account</label>
+          <div class="col-sm-10">
+            <input autofocus class="form-control" id="account-query" placeholder="david.bowie">
+            <small class="form-text text-muted" id="account-query-help">You can enter the username, email or the id of the account.</small>
+          </div>
+        </div>
+      </form>
+      <h3 id="account-title">Create account</h3>
+      <p>You can only specify values relevant to releases here. For more options, use <a href="/admin/accounts/" target="_blank">the account admin</a>.</p>
+      <form id="account-form">
+        <fieldset>
+          <div class="form-group row">
+            <label class="col-sm-2 col-form-label">Account id</label>
+            <div class="col-sm-10">
+              <span class="form-text">
+                <a class="text-muted" href="#" id="account-id" target="_blank">N/A</a>
+              </span>
+            </div>
+          </div>
+          <div class="form-group row">
+            <label class="col-sm-2 col-form-label" for="account-username">Username</label>
+            <div class="col-sm-10">
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <span class="input-group-text">@</span>
+                </div>
+                <input class="form-control" id="account-username" name="identifier" placeholder="david.bowie" required>
+              </div>
+            </div>
+          </div>
+          <div class="form-group row">
+            <label class="col-sm-2 col-form-label" for="account-display-name">Display name</label>
+            <div class="col-sm-10">
+              <input class="form-control" id="account-display-name" name="display_name" placeholder="David Bowie" required>
+            </div>
+          </div>
+          <div class="form-group row">
+            <label class="col-sm-2 col-form-label" for="account-image">Avatar</label>
+            <div class="col-sm-10">
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <span class="input-group-text" id="account-image-preview" style="background: #fafafa; background-position: 50% 50%; background-size: cover; width: 43px;">&nbsp;</span>
+                </div>
+                <input accept="image/*" class="form-control" id="account-image" type="file" name="image_url">
+              </div>
+            </div>
+          </div>
+          <div class="form-group row">
+            <label class="col-sm-2 col-form-label" for="account-cover">Cover image</label>
+            <div class="col-sm-10">
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <span class="input-group-text" id="account-cover-preview" style="background: #fafafa; background-position: 50% 30%; background-size: cover; width: 76px;"></span>
+                </div>
+                <input accept="image/*" class="form-control" id="account-cover" type="file" name="properties.cover_url">
+              </div>
+            </div>
+          </div>
+          <fieldset class="form-group">
+            <div class="row">
+              <legend class="col-sm-2 col-form-label">Status</legend>
+              <div class="col-sm-10">
+                <div class="form-check">
+                  <input class="form-check-input" id="account-status-1" name="status" type="radio" value="active">
+                  <label class="form-check-label" for="account-status-1">Regular account</label>
+                </div>
+                <div class="form-check">
+                  <input checked class="form-check-input" id="account-status-2" name="status" type="radio" value="unclaimed">
+                  <label class="form-check-label" for="account-status-2">Community profile</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" id="account-status-3" name="status" type="radio" value="active_verified">
+                  <label class="form-check-label" for="account-status-3">Verified account</label>
+                </div>
+                <div class="form-check" id="account-status-4-container" style="display: none;">
+                  <input class="form-check-input" id="account-status-4" name="status" type="radio" value="other">
+                  <label class="form-check-label" for="account-status-4">Other (<code id="account-status-4-value">other</code>)</label>
+                </div>
+              </div>
+            </div>
+          </fieldset>
+          <div class="form-group row">
+            <label class="col-sm-2 col-form-label" for="account-booking-email">Booking email</label>
+            <div class="col-sm-10">
+              <input class="form-control" id="account-booking-email" name="properties.booking_email" placeholder="dave.the.star@gmail.com">
+            </div>
+          </div>
+          <div class="form-group row">
+            <label class="col-sm-2 col-form-label" for="account-youtube">Networks</label>
+            <div class="col-sm-5">
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-youtube.png); background-size: 100%; width: 38px;"></span>
+                </div>
+                <input class="form-control" id="account-youtube" name="properties.youtube" placeholder="https://www.youtube.com/...">
+              </div>
+            </div>
+            <div class="col-sm-5">
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-spotify.png); background-size: 100%; width: 38px;"></span>
+                </div>
+                <input class="form-control" id="account-spotify" name="properties.spotify" placeholder="https://open.spotify.com/...">
+              </div>
+            </div>
+          </div>
+          <div class="form-group row">
+            <div class="col-sm-5 offset-sm-2">
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-soundcloud.png); background-size: 100%; width: 38px;"></span>
+                </div>
+                <input class="form-control" id="account-soundcloud" name="properties.soundcloud" placeholder="https://soundcloud.com/...">
+              </div>
+            </div>
+            <div class="col-sm-5">
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-itunes.png); background-size: 100%; width: 38px;"></span>
+                </div>
+                <input class="form-control" id="account-itunes" name="properties.itunes" placeholder="https://itunes.apple.com/...">
+              </div>
+            </div>
+          </div>
+          <div class="form-group row">
+            <div class="col-sm-5 offset-sm-2">
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-googleplay.png); background-size: 100%; width: 38px;"></span>
+                </div>
+                <input class="form-control" id="account-googleplay" name="properties.googleplay" placeholder="https://play.google.com/...">
+              </div>
+            </div>
+            <div class="col-sm-5">
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-amazon.png); background-size: 100%; width: 38px;"></span>
+                </div>
+                <input class="form-control" id="account-amazon" name="properties.amazon" placeholder="https://www.amazon.com/...">
+              </div>
+            </div>
+          </div>
+          <div class="form-group row">
+            <div class="col-sm-5 offset-sm-2">
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-deezer.png); background-size: 100%; width: 38px;"></span>
+                </div>
+                <input class="form-control" id="account-deezer" name="properties.deezer" placeholder="https://www.deezer.com/...">
+              </div>
+            </div>
+            <div class="col-sm-5">
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-tidal.png); background-size: 100%; width: 38px;"></span>
+                </div>
+                <input class="form-control" id="account-tidal" name="properties.tidal" placeholder="http://tidal.com/...">
+              </div>
+            </div>
+          </div>
+          <div class="form-group row">
+            <div class="col-sm-5 offset-sm-2">
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-facebook.png); background-size: 100%; width: 38px;"></span>
+                </div>
+                <input class="form-control" id="account-facebook" name="properties.facebook" placeholder="https://www.facebook.com/...">
+              </div>
+            </div>
+            <div class="col-sm-5">
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-instagram.png); background-size: 100%; width: 38px;"></span>
+                </div>
+                <input class="form-control" id="account-instagram" name="properties.instagram" placeholder="https://www.instagram.com/...">
+              </div>
+            </div>
+          </div>
+          <div class="form-group row">
+            <div class="col-sm-5 offset-sm-2">
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-snapchat.png); background-size: 100%; width: 38px;"></span>
+                </div>
+                <input class="form-control" id="account-snapchat" name="properties.snapchat" placeholder="https://www.snapchat.com/add/...">
+              </div>
+            </div>
+            <div class="col-sm-5">
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-twitter.png); background-size: 100%; width: 38px;"></span>
+                </div>
+                <input class="form-control" id="account-twitter" name="properties.twitter" placeholder="https://twitter.com/...">
+              </div>
+            </div>
+          </div>
+          <div class="form-group row">
+            <label class="col-sm-2 col-form-label" for="account-releases">Releases</label>
+            <div class="col-sm-5">
+              <textarea class="form-control" id="account-releases" name="properties.releases" placeholder="1234567890123456&#10;2345678901234567&#10;3456789012345678" rows="8"></textarea>
+              <small class="form-text text-muted" id="account-releases-help">Enter a list of content ids, <em>one per line</em>, in the desired release order (first release will be the default).</small>
+            </div>
+            <div class="col-sm-5">
+              <div class="list-group" id="account-releases-list"></div>
+            </div>
+          </div>
+          <div class="form-group row">
+            <div class="col-sm-10 offset-sm-2">
+              <button class="btn btn-primary" id="account-submit">Create</button>
+            </div>
+          </div>
+        </fieldset>
+      </form>
+      <h2 class="mt-4">2. What’s the content?</h2>
+      <p>Search for the video that makes up the release, then you can set up the release details.</p>
+      <form>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label" for="content-query">Search content</label>
+          <div class="col-sm-10">
+            <div class="input-group">
+              <div class="input-group-prepend">
+                <span class="input-group-text" id="content-query-preview" style="background: #fafafa; background-position: 50% 50%; background-size: cover; width: 67px;"></span>
+              </div>
+              <input class="form-control" id="content-query" placeholder="https://www.youtube.com/...">
+            </div>
+            <small class="form-text text-muted" id="content-query-help">Enter the original URL for the content (or the content id).</small>
+          </div>
+        </div>
+        <div class="form-group row" id="content-original-container" style="display: none;">
+          <label class="col-sm-2 col-form-label">Original content</label>
+          <div class="col-sm-10">
+            <div class="list-group" id="content-original-list">
+            </div>
+          </div>
+        </div>
+      </form>
+      <div id="release" style="visibility: hidden;">
+        <h2 class="mt-4">3. Set up release</h2>
+        <p>Properties on the release (such as networks and cover image) will be preferred over the ones on the account (which will be used as a fallback).</p>
+        <form id="release-form">
+          <fieldset>
+            <div class="form-group row">
+              <label class="col-sm-2 col-form-label">Original URL</label>
+              <div class="col-sm-10">
+                <span class="form-text">
+                  <a class="text-muted" href="#" id="release-original-url" target="_blank">N/A</a>
+                  <strong id="release-original-title" style="display: none;"></strong>
+                </span>
+              </div>
+            </div>
+            <div class="form-group row">
+              <label class="col-sm-2 col-form-label">Creator</label>
+              <div class="col-sm-10">
+                <span class="form-text">
+                  <a class="text-muted" href="#" id="release-creator" target="_blank">@anonymous</a>
+                  <small class="form-text text-danger" id="release-creator-warning"></small>
+                </span>
+              </div>
+            </div>
+            <div class="form-group row">
+              <label class="col-sm-2 col-form-label" for="release-title-short">Short title</label>
+              <div class="col-sm-10">
+                <input class="form-control" id="release-title-short" name="properties.title_short" placeholder="Life on Mars">
+                <small class="form-text text-muted">A shorter, cleaned up version of the content title.</small>
+              </div>
+            </div>
+            <div class="form-group row">
+              <label class="col-sm-2 col-form-label" for="release-creator-label">Artist label</label>
+              <div class="col-sm-10">
+                <input class="form-control" id="release-creator-label" name="properties.creator_label" placeholder="David Bowie feat. Wiz Khalifa">
+                <small class="form-text text-muted">If specified, this will be used in place of the display name of the artist. Useful to add "featuring" names, etc.</small>
+              </div>
+            </div>
+            <div class="form-group row">
+              <label class="col-sm-2 col-form-label" for="release-cover">Cover image</label>
+              <div class="col-sm-10">
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text" id="release-cover-preview" style="background: #fafafa; background-position: 50% 30%; background-size: cover; width: 76px;"></span>
+                  </div>
+                  <input accept="image/*" class="form-control" id="release-cover" type="file" name="properties.cover_url">
+                </div>
+              </div>
+            </div>
+            <div class="form-group row">
+              <label class="col-sm-2 col-form-label" for="release-youtube">Networks</label>
+              <div class="col-sm-5">
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-youtube.png); background-size: 100%; width: 38px;"></span>
+                  </div>
+                  <input class="form-control" id="release-youtube" name="properties.youtube" placeholder="https://www.youtube.com/...">
+                </div>
+              </div>
+              <div class="col-sm-5">
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-spotify.png); background-size: 100%; width: 38px;"></span>
+                  </div>
+                  <input class="form-control" id="release-spotify" name="properties.spotify" placeholder="https://open.spotify.com/...">
+                </div>
+              </div>
+            </div>
+            <div class="form-group row">
+              <div class="col-sm-5 offset-sm-2">
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-soundcloud.png); background-size: 100%; width: 38px;"></span>
+                  </div>
+                  <input class="form-control" id="release-soundcloud" name="properties.soundcloud" placeholder="https://soundcloud.com/...">
+                </div>
+              </div>
+              <div class="col-sm-5">
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-itunes.png); background-size: 100%; width: 38px;"></span>
+                  </div>
+                  <input class="form-control" id="release-itunes" name="properties.itunes" placeholder="https://itunes.apple.com/...">
+                </div>
+              </div>
+            </div>
+            <div class="form-group row">
+              <div class="col-sm-5 offset-sm-2">
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-googleplay.png); background-size: 100%; width: 38px;"></span>
+                  </div>
+                  <input class="form-control" id="release-googleplay" name="properties.googleplay" placeholder="https://play.google.com/...">
+                </div>
+              </div>
+              <div class="col-sm-5">
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-amazon.png); background-size: 100%; width: 38px;"></span>
+                  </div>
+                  <input class="form-control" id="release-amazon" name="properties.amazon" placeholder="https://www.amazon.com/...">
+                </div>
+              </div>
+            </div>
+            <div class="form-group row">
+              <div class="col-sm-5 offset-sm-2">
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-deezer.png); background-size: 100%; width: 38px;"></span>
+                  </div>
+                  <input class="form-control" id="release-deezer" name="properties.deezer" placeholder="https://www.deezer.com/...">
+                </div>
+              </div>
+              <div class="col-sm-5">
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-tidal.png); background-size: 100%; width: 38px;"></span>
+                  </div>
+                  <input class="form-control" id="release-tidal" name="properties.tidal" placeholder="http://tidal.com/...">
+                </div>
+              </div>
+            </div>
+            <div class="form-group row">
+              <div class="col-sm-5 offset-sm-2">
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-facebook.png); background-size: 100%; width: 38px;"></span>
+                  </div>
+                  <input class="form-control" id="release-facebook" name="properties.facebook" placeholder="https://www.facebook.com/...">
+                </div>
+              </div>
+              <div class="col-sm-5">
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-instagram.png); background-size: 100%; width: 38px;"></span>
+                  </div>
+                  <input class="form-control" id="release-instagram" name="properties.instagram" placeholder="https://www.instagram.com/...">
+                </div>
+              </div>
+            </div>
+            <div class="form-group row">
+              <div class="col-sm-5 offset-sm-2">
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-snapchat.png); background-size: 100%; width: 38px;"></span>
+                  </div>
+                  <input class="form-control" id="release-snapchat" name="properties.snapchat" placeholder="https://www.snapchat.com/add/...">
+                </div>
+              </div>
+              <div class="col-sm-5">
+                <div class="input-group">
+                  <div class="input-group-prepend">
+                    <span class="input-group-text" style="background: url(https://www.reaction.cam/s/icon-twitter.png); background-size: 100%; width: 38px;"></span>
+                  </div>
+                  <input class="form-control" id="release-twitter" name="properties.twitter" placeholder="https://twitter.com/...">
+                </div>
+              </div>
+            </div>
+            <div class="form-group row">
+              <div class="col-sm-10 offset-sm-2">
+                <button class="btn btn-success" id="release-submit">Update &amp; add release</button>
+              </div>
+            </div>
+          </fieldset>
+        </form>
+      </div>
+    </main>
+    <script>
+    (function () {
+      const ANONYMOUS_ID = 5091062658891776;
+
+      const $ = q => document.querySelector(q);
+
+      // Search
+      const accountRenderer = {
+        searchDidBegin(query) {
+          $('#account-query-help').classList.remove('text-danger');
+          $('#account-query-help').classList.add('text-muted');
+          $('#account-query-help').textContent = 'Searching…';
+        },
+        searchDidError(query, error) {
+          $('#account-query-help').classList.remove('text-muted');
+          $('#account-query-help').classList.add('text-danger');
+          $('#account-query-help').textContent = error;
+        },
+        searchDidProgress(query, info) {
+
+        },
+        searchDidFinish(query, account) {
+          if (!account) {
+            setAccount(null);
+            $('#account-query-help').classList.remove('text-muted');
+            $('#account-query-help').classList.add('text-danger');
+            $('#account-query-help').textContent = 'No account was found. Create a new one below.';
+            return;
+          }
+          setAccount(account);
+          $('#account-query-help').classList.remove('text-danger', 'text-muted');
+          $('#account-query-help').innerHTML = `Found <strong>@${escapeHTML(account.username)}</strong>! Update below or scroll further down to add a release.`;
+        }
+      };
+
+      const accountSearcher = {
+        async performSearch(query) {
+          const confirmCopy = 'You’ve made changes below. Searching will discard them. Are you sure?';
+          if (accountHasChanges && !confirm(confirmCopy)) {
+            throw Error('Cancelled by user');
+          }
+          if (!query) return null;
+          const result = await fetch(`/admin/account.json?identifier=${escape(query)}`, {credentials: 'include'});
+          if (result.status == 404) return null;
+          const response = await result.json();
+          if (!result.ok) {
+            if (!response || !response.errors || !response.errors.length) {
+              throw Error(`Unexpected status ${result.status}`);
+            }
+            throw Error(`Got error(s):\n${response.errors.map(e => `• ${e}`).join('\n')}`);
+          }
+          return response;
+        }
+      };
+
+      class Searcher {
+        constructor(searchEngine, renderEngine) {
+          this.currentQuery = null;
+          this.r = renderEngine;
+          this.s = searchEngine;
+        }
+
+        cleanQuery(query) {
+          if (typeof query != 'string') {
+            throw Error('query must be a string');
+          }
+          return query.replace(/^\s+|\s+$/g, '').replace(/\s+/g, ' ');
+        }
+
+        presearch(query) {
+          query = this.cleanQuery(query);
+          if (query === this.currentQuery) return;
+          this.r.searchDidBegin(query);
+        }
+
+        report(query, info) {
+          query = this.cleanQuery(query);
+          if (query !== this.currentQuery) return;
+          this.r.searchDidProgress(query, info);
+        }
+
+        async search(query) {
+          query = this.cleanQuery(query);
+          if (query === this.currentQuery) return;
+          this.currentQuery = query;
+          try {
+            const result = await this.s.performSearch(query, info => this.report(query, info));
+            if (query !== this.currentQuery) return;
+            this.r.searchDidFinish(query, result);
+          } catch (error) {
+            if (query !== this.currentQuery) return;
+            console.error(`Search for "${query}" failed:`, error);
+            this.r.searchDidError(query, error);
+          }
+        }
+      }
+
+      function escapeHTML(text) {
+        return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;');
+      }
+
+      function setUpScheduler({delay = 100, input, searcher}) {
+        const search = () => searcher.search(input.value);
+        let timeout = 0;
+        const scheduleSearch = () => {
+          clearTimeout(timeout);
+          searcher.presearch(input.value);
+          timeout = setTimeout(search, delay);
+        };
+        input.addEventListener('change', scheduleSearch);
+        input.addEventListener('keypress', scheduleSearch);
+        input.addEventListener('keyup', scheduleSearch);
+        return {scheduleSearch};
+      }
+
+      const accountSearchScheduler = setUpScheduler({
+        input: $('#account-query'),
+        searcher: new Searcher(accountSearcher, accountRenderer),
+      });
+
+      // Create/update account
+
+      let accountHasChanges = false;
+      $('#account-form').addEventListener('change', e => {
+        accountHasChanges = true;
+      });
+
+      const networks = ['youtube', 'spotify', 'soundcloud', 'itunes', 'googleplay', 'amazon',
+                        'deezer', 'tidal', 'facebook', 'instagram', 'snapchat', 'twitter'];
+
+      $('#account-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        const body = new FormData(e.target);
+        // Transform some form values before sending them to the backend.
+        if (body.get('status') == 'active_verified') {
+          body.set('status', 'active');
+          body.set('verified', 'true');
+        } else {
+          body.set('verified', 'false');
+        }
+        // Ensure that all properties are specified as JSON values.
+        stringifyProperties(body, (key, value) => {
+          switch (key) {
+          case 'releases':
+            return parseReleases(value);
+          default:
+            return value || null;
+          }
+        });
+        // Disable the entire form while the request is in flight.
+        const fieldset = e.target.querySelector('fieldset');
+        fieldset.disabled = true;
+        // Create/update the account.
+        const accountId = parseInt($('#account-form').dataset.accountId);
+        const path = '/admin/account.json' + (Number.isInteger(accountId) ? `?identifier=${accountId}` : '');
+        try {
+          const result = await fetch(path, {body, credentials: 'include', method: 'POST'});
+          const response = await result.json();
+          if (!result.ok) {
+            if (!response || !response.errors || !response.errors.length) {
+              throw Error(`Unexpected status ${result.status}`);
+            }
+            if (response.errors.length == 1) throw Error(response.errors[0]);
+            throw Error(`Multiple errors:\n${response.errors.map(e => `• ${e}`).join('\n')}`);
+          }
+          setAccount(response);
+        } catch (e) {
+          alert(`Request failed!\n\n${e.message}`);
+        } finally {
+          fieldset.disabled = false;
+        }
+      });
+
+      function setUpImagePreview(image, preview) {
+        image.addEventListener('change', e => {
+          const file = image.files[0];
+          let url = file ? URL.createObjectURL(file) : preview.dataset.storedImage;
+          preview.style.backgroundImage = url ? `url(${url})` : '';
+        });
+      }
+
+      setUpImagePreview($('#account-image'), $('#account-image-preview'));
+      setUpImagePreview($('#account-cover'), $('#account-cover-preview'));
+
+      const accountCache = {};
+      function setAccount(account) {
+        $('#account-form').reset();
+        accountHasChanges = false;
+        if (!account) {
+          $('#account-form').dataset.accountId = '';
+          $('#account-title').textContent = 'Create account';
+          $('#account-id').classList.add('text-muted');
+          $('#account-id').href = '#';
+          $('#account-id').textContent = 'N/A';
+          $('#account-username').disabled = false;
+          $('#account-image-preview').dataset.storedImage = '';
+          $('#account-image-preview').style.backgroundImage = '';
+          $('#account-cover-preview').dataset.storedImage = '';
+          $('#account-cover-preview').style.backgroundImage = '';
+          $('#account-submit').classList.remove('btn-success');
+          $('#account-submit').classList.add('btn-primary');
+          $('#account-submit').textContent = 'Create';
+          $('#account-releases-list').style.display = 'none';
+          $('#content-original-container').style.display = 'none';
+          updateCreatorLabel();
+          return;
+        }
+        accountCache[account.id] = account;
+        $('#account-form').dataset.accountId = account.id.toString();
+        $('#account-title').textContent = `Update @${account.username}`;
+        $('#account-id').classList.remove('text-muted');
+        $('#account-id').href = `/admin/accounts/${account.id}/`;
+        $('#account-id').textContent = account.id;
+        $('#account-username').disabled = true;
+        $('#account-username').value = account.username;
+        $('#account-display-name').value = account.display_name;
+        $('#account-image-preview').style.backgroundImage = `url(${account.image_url})`;
+        const props = account.properties;
+        $('#account-image-preview').dataset.storedImage = account.image_url || '';
+        $('#account-cover-preview').style.backgroundImage = props.cover_url ? `url(${props.cover_url})` : '';
+        $('#account-cover-preview').dataset.storedImage = props.cover_url || '';
+        if (account.status == 'active' && !account.verified) {
+          $('#account-status-1').checked = true;
+        } else if (account.status == 'unclaimed') {
+          $('#account-status-2').checked = true;
+        } else if (account.status == 'active' && account.verified) {
+          $('#account-status-3').checked = true;
+        } else {
+          $('#account-status-4-value').textContent = account.status;
+          $('#account-status-4-container').style.display = '';
+          $('#account-status-4').value = account.status;
+          $('#account-status-4').checked = true;
+        }
+        $('#account-booking-email').value = props.booking_email || '';
+        for (const network of networks) {
+          $(`#account-${network}`).value = props[network] || '';
+        }
+        if (Array.isArray(props.releases)) {
+          $('#account-releases').value = props.releases.join('\n') + '\n';
+          refreshReleasesList(account.id, props.releases);
+        } else {
+          $('#account-releases').value = '';
+        }
+        $('#account-submit').classList.remove('btn-primary');
+        $('#account-submit').classList.add('btn-success');
+        $('#account-submit').textContent = `Update @${account.username}`;
+        // Populate the original content list.
+        $('#content-original-container').style.display = $('#content-original-container').dataset.accountId == account.id.toString() ? '' : 'none';
+        fetch(`/v53/profile/${account.id}/original/`)
+          .then(r => r.json())
+          .then(result => {
+            if (!result.data.length) return;
+            if ($('#account-form').dataset.accountId != account.id.toString()) return;
+            let html = '';
+            for (const item of result.data) {
+              contentCache[item.content.id] = item.content;
+              const isRelease = (props.releases && props.releases.indexOf(item.content.id) !== -1);
+              html += `<a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center${isRelease ? ' list-group-item-primary' : ''}" data-set-content-query="${item.content.id}" title="Id: ${item.content.id}">\n`;
+              let titleHTML = escapeHTML(item.content.title || 'Untitled');
+              const cprops = item.content.properties, subitems = [];
+              if (cprops.title_short) subitems.push(cprops.title_short);
+              if (cprops.creator_label) subitems.push(cprops.creator_label);
+              if (subitems.length) {
+                titleHTML += `<br><small>${escapeHTML(subitems.join(' • '))}</small>`;
+              }
+              html += `<span>${titleHTML}</span>\n`;
+              html += `<span class="badge badge-primary badge-pill">${item.content.related_count.toLocaleString()}</span>\n`;
+              html += '</a>\n';
+            }
+            $('#content-original-list').innerHTML = html;
+            $('#content-original-container').dataset.accountId = account.id.toString();
+            $('#content-original-container').style.display = '';
+          });
+        updateCreatorLabel();
+      }
+
+      $('#account-releases').addEventListener('keyup', e => {
+        refreshReleasesList(
+          parseInt($('#account-form').dataset.accountId),
+          parseReleases($('#account-releases').value));
+      });
+
+      async function refreshReleasesList(accountId, contentIds) {
+        $('#account-releases-list').style.display = $('#account-releases-list').dataset.accountId === accountId.toString() ? '' : 'none';
+        const contentList = await Promise.all(contentIds.map(async contentId => {
+          if (contentCache[contentId]) return contentCache[contentId];
+          const result = await fetch(`/admin/content.json?identifier=${contentId}`, {credentials: 'include'});
+          if (!result.ok) throw Error(`Could not get content for id ${contentId}`);
+          const content = await result.json();
+          contentCache[content.id] = content;
+          return content;
+        }));
+        if ($('#account-form').dataset.accountId !== accountId.toString()) return;
+        const seenIds = new Set();
+        let html = '';
+        for (const content of contentList) {
+          let titleHTML = escapeHTML(content.title || 'Untitled');
+          const props = content.properties, subitems = [];
+          if (props.title_short) subitems.push(props.title_short);
+          if (props.creator_label) subitems.push(props.creator_label);
+          if (subitems.length) {
+            titleHTML = `${escapeHTML(subitems.join(' • '))}<br><small class="text-muted">${titleHTML}</small>`;
+          }
+          if (content.creator_id !== accountId) {
+            html += `<a href="#" class="list-group-item list-group-item-action list-group-item-danger text-truncate" data-set-content-query="${content.id}" title="Id: ${content.id}">${titleHTML}<br><strong>Creator Mismatch</strong>: ${content.creator_id}`;
+          } else if (seenIds.has(content.id)) {
+            html += `<a href="#" class="list-group-item list-group-item-action list-group-item-warning text-truncate" data-set-content-query="${content.id}" title="Id: ${content.id}">${titleHTML}<br><strong>Duplicate Content Id</strong>`;
+          } else {
+            html += `<a href="#" class="list-group-item list-group-item-action text-truncate" data-set-content-query="${content.id}" title="Id: ${content.id}">${titleHTML}</a>`;
+          }
+          seenIds.add(content.id);
+        }
+        $('#account-releases-list').style.display = '';
+        $('#account-releases-list').dataset.accountId = accountId.toString();
+        $('#account-releases-list').innerHTML = html;
+      }
+
+      document.body.addEventListener('click', e => {
+        let t = e.target;
+        do {
+          if (!t.dataset) continue;
+          if (t.dataset.setAccountQuery) {
+            e.preventDefault();
+            $('#account-query').value = t.dataset.setAccountQuery;
+            accountSearchScheduler.scheduleSearch();
+          }
+          if (t.dataset.setContentQuery) {
+            e.preventDefault();
+            $('#content-query').value = t.dataset.setContentQuery;
+            contentSearchScheduler.scheduleSearch();
+          }
+        } while (t = t.parentNode);
+      });
+
+      const accountReleasesHelpText = $('#account-releases-help').textContent;
+      $('#account-releases').addEventListener('keyup', e => {
+        let releases;
+        try {
+          releases = parseReleases(e.target.value);
+        } catch (e) {
+          $('#account-releases-help').classList.remove('text-muted');
+          $('#account-releases-help').classList.add('text-danger');
+          $('#account-releases-help').textContent = 'Error: Releases must be a list of content ids (integers)';
+          return;
+        }
+        $('#account-releases-help').classList.remove('text-danger');
+        $('#account-releases-help').classList.add('text-muted');
+        $('#account-releases-help').textContent = accountReleasesHelpText;
+      });
+
+      function parseReleases(value) {
+        const releases = value.split('\n')
+          .map(cid => cid.trim())
+          .filter(cid => !!cid)
+          .map(cid => parseInt(cid));
+        if (!releases.every(Number.isInteger)) {
+          throw Error('Not all ids were integers');
+        }
+        return releases;
+      }
+
+      // Find/update content
+
+      let releaseHasChanges = false;
+      $('#release-form').addEventListener('change', e => {
+        releaseHasChanges = true;
+      });
+
+      const contentCache = {};
+      function setContent(content) {
+        $('#release-form').reset();
+        releaseHasChanges = false;
+        if (!content) {
+          $('#release').style.visibility = 'hidden';
+          $('#release-form').dataset.contentId = '';
+          $('#release-form').dataset.creatorId = '';
+          return;
+        }
+        contentCache[content.id] = content;
+        $('#release').style.visibility = '';
+        $('#release-form').dataset.contentId = content.id.toString();
+        $('#release-form').dataset.creatorId = content.creator_id.toString();
+        $('#release-original-url').classList.toggle('text-muted', !content.original_url);
+        $('#release-original-url').href = content.original_url || '#';
+        $('#release-original-url').textContent = content.original_url || 'N/A';
+        if (content.original_url && content.title) {
+          $('#release-original-title').innerHTML = `<br>${escapeHTML(content.title)}`;
+          $('#release-original-title').style.display = '';
+        } else {
+          $('#release-original-title').style.display = 'none';
+        }
+        const props = content.properties;
+        $('#release-title-short').value = props.title_short || '';
+        $('#release-creator-label').value = props.creator_label || '';
+        $('#release-cover-preview').style.backgroundImage = props.cover_url ? `url(${props.cover_url})` : '';
+        $('#release-cover-preview').dataset.storedImage = props.cover_url || '';
+        for (const network of networks) {
+          $(`#release-${network}`).value = props[network] || '';
+        }
+        updateCreatorLabel();
+        if (!accountCache[content.creator_id]) {
+          fetch(`/admin/account.json?identifier=${content.creator_id}`, {credentials: 'include'})
+            .then(r => r.json())
+            .then(account => {
+              accountCache[account.id] = account;
+              updateCreatorLabel();
+            });
+        }
+      }
+
+      function updateCreatorLabel() {
+        const content = contentCache[$('#release-form').dataset.contentId];
+        if (!content) return;
+        const creatorId = parseInt($('#release-form').dataset.creatorId);
+        if (!Number.isInteger(creatorId)) return;
+        const creator = accountCache[creatorId];
+        const creatorLabel = creator ? `@${creator.username}` : creatorId.toString();
+        const newCreator = accountCache[$('#account-form').dataset.accountId];
+        const newCreatorLabel = newCreator ? `@${newCreator.username}` : 'N/A';
+        $('#release-creator').textContent = creatorLabel;
+        if (content.creator_id === ANONYMOUS_ID) {
+          // This release has not been assigned to an account yet.
+          $('#release-creator').classList.add('text-muted');
+          $('#release-creator').textContent = '@anonymous';
+          $('#release-creator').dataset.setAccountQuery = '';
+          if (newCreator) {
+            $('#release-creator-warning').innerHTML = `This account is currently not assigned to a creator. It <strong>will be assigned to ${escapeHTML(newCreatorLabel)}</strong> when you save.`;
+          } else {
+            $('#release-creator-warning').textContent = `This account is currently not assigned to a creator. Please create or search for an account above.`;
+          }
+          $('#release-creator-warning').style.display = '';
+        } else {
+          $('#release-creator').classList.remove('text-muted');
+          $('#release-creator').textContent = creatorLabel;
+          $('#release-creator').dataset.setAccountQuery = creator ? creator.username : creatorId.toString();
+          if (!newCreator) {
+            $('#release-creator-warning').textContent = `You haven’t loaded a creator to save this release to. Click ${creatorLabel} above to load their account.`;
+            $('#release-creator-warning').style.display = '';
+          } else if (newCreator.id !== content.creator_id) {
+            $('#release-creator-warning').innerHTML = `Saving this release <strong>will change creator to ${escapeHTML(newCreatorLabel)}</strong>. Alternatively, click ${escapeHTML(creatorLabel)} above to switch artist account.`;
+            $('#release-creator-warning').style.display = '';
+          } else {
+            // All is good – no warning needed.
+            $('#release-creator-warning').style.display = 'none';
+          }
+        }
+      }
+
+      const contentRenderer = {
+        searchDidBegin(query) {
+          $('#content-query-help').classList.remove('text-danger');
+          $('#content-query-help').classList.add('text-muted');
+          $('#content-query-help').textContent = 'Searching…';
+          $('#content-query-preview').style.backgroundImage = '';
+        },
+        searchDidError(query, error) {
+          $('#content-query-help').classList.remove('text-muted');
+          $('#content-query-help').classList.add('text-danger');
+          $('#content-query-help').textContent = error;
+          $('#content-query-preview').style.backgroundImage = '';
+        },
+        searchDidProgress(query, info) {
+          if (!info.thumb) return;
+          $('#content-query-preview').style.backgroundImage = `url(${info.thumb})`;
+        },
+        searchDidFinish(query, content) {
+          if (!content) {
+            setContent(null);
+            $('#content-query-help').classList.remove('text-muted');
+            $('#content-query-help').classList.add('text-danger');
+            $('#content-query-help').textContent = 'Failed to get or create content.';
+            $('#content-query-preview').style.backgroundImage = '';
+            return;
+          }
+          setContent(content);
+          $('#content-query-help').classList.remove('text-danger', 'text-muted');
+          const escapedTitle = escapeHTML(content.title || 'Untitled');
+          let titleHTML;
+          if (content.url) {
+            titleHTML = `<a href="${escapeHTML(content.url)}" target="_blank">${escapedTitle}</a>`;
+          } else {
+            titleHTML = `<strong>${escapedTitle}</strong>`;
+          }
+          $('#content-query-help').innerHTML = `Found ${titleHTML} (<a href="/admin/content/${content.id}/" target="_blank">admin</a>).`;
+          $('#content-query-preview').style.backgroundImage = `url(${content.thumb_url})`;
+        }
+      };
+
+      const contentSearcher = {
+        async performSearch(query, reportProgress) {
+          const confirmCopy = 'You’ve made changes below. Searching will discard them. Are you sure?';
+          if (releaseHasChanges && !confirm(confirmCopy)) {
+            throw Error('Cancelled by user');
+          }
+          if (!query) return null;
+          let contentId;
+          if (query.match(/^\d+$/)) {
+            contentId = parseInt(query);
+          } else {
+            const result = await fetch(`https://www.reaction.cam/x/metadata?url=${escape(query)}`);
+            if (!result.ok) throw Error('Content for that URL could not be found or created');
+            const metadata = await result.json();
+            reportProgress({thumb: metadata.thumb_url});
+            contentId = metadata.id;
+          }
+          const result = await fetch(`/admin/content.json?identifier=${contentId}`, {credentials: 'include'});
+          if (!result.ok) throw Error(`Could not get content for id ${contentId}`);
+          const content = await result.json();
+          return content;
+        }
+      };
+
+      const contentSearchScheduler = setUpScheduler({
+        input: $('#content-query'),
+        searcher: new Searcher(contentSearcher, contentRenderer),
+      });
+
+      setUpImagePreview($('#release-cover'), $('#release-cover-preview'));
+
+      $('#release-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        const creatorId = parseInt($('#account-form').dataset.accountId);
+        const currentCreatorId = parseInt($('#release-form').dataset.creatorId);
+        if (!Number.isInteger(creatorId)) {
+          alert('Please load an artist above (Step 1) before saving a release.');
+          return;
+        } else if (currentCreatorId !== ANONYMOUS_ID && creatorId !== currentCreatorId) {
+          const currentCreator = accountCache[currentCreatorId];
+          const currentCreatorLabel = currentCreator ? `@${currentCreator.username}` : currentCreatorId.toString();
+          const creator = accountCache[creatorId];
+          if (!confirm(`⚠️ WARNING ⚠️\nThe current content creator (${currentCreatorLabel}) doesn’t match the selected artist (@${creator.username}). Continuing will change ownership of this content.`)) {
+            return;
+          }
+        }
+        const body = new FormData(e.target);
+        body.set('creator', creatorId.toString());
+        // Ensure that all properties are specified as JSON values.
+        stringifyProperties(body);
+        // Disable the entire form while the request is in flight.
+        const fieldset = e.target.querySelector('fieldset');
+        fieldset.disabled = true;
+        // Get the content id.
+        const contentId = parseInt($('#release-form').dataset.contentId);
+        if (!contentId) {
+          alert('Could not update content (failed to get id)!');
+          return;
+        }
+        // Update the content.
+        const path = `/admin/content.json?identifier=${contentId}`;
+        try {
+          const result = await fetch(path, {body, credentials: 'include', method: 'POST'});
+          if (!result.ok) {
+            fieldset.disabled = false;
+            return;
+          }
+          // Wait for the result and update the UI.
+          const content = await result.json();
+          setContent(content);
+        } catch (e) {
+          alert(`Request failed\n${e}`);
+        } finally {
+          fieldset.disabled = false;
+        }
+        try {
+          const releases = parseReleases($('#account-releases').value);
+          if (releases.indexOf(contentId) === -1) {
+            releases.push(contentId);
+          }
+          $('#account-releases').value = releases.join('\n') + '\n';
+          refreshReleasesList(creatorId, releases);
+        } catch (e) {
+          console.warn(e);
+        }
+        $('#account-releases').focus();
+      });
+
+      // TODO: Support differentation between "" and null.
+      const stringifyPropertiesDefaultMapper = (k, v) => (v || null);
+
+      function stringifyProperties(form, mapper = stringifyPropertiesDefaultMapper) {
+        const properties = {};
+        if (form.has('properties')) {
+          const p = JSON.parse(form.get('properties'));
+          for (const [key, value] of Object.entries(p)) {
+            properties[key] = mapper(key, value);
+          }
+        }
+        for (const [key, value] of Array.from(form.entries())) {
+          if (!key.match(/^properties\./) || value instanceof File) continue;
+          form.delete(key);
+          const propKey = key.substr(11);
+          properties[propKey] = mapper(propKey, value);
+        }
+        form.set('properties', JSON.stringify(properties));
+      }
+
+      window.onbeforeunload = () => (accountHasChanges || releaseHasChanges) ? '' : undefined;
+    })();
+    </script>
+  </body>
+</html>

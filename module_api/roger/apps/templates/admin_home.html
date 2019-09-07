@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="//code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha256-3edrmyuQ0w65f8gfBsqowzjJe2iM6n0nKciPUp8y+7E=" crossorigin="anonymous"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.bundle.min.js" integrity="sha384-feJI7QwhOS+hwpX2zkaeJQjeiwlhOP+SdQDqhgvvo1DsjtiSQByFdThsxO669S2D" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <main class="container">
+      <h1 class="display-4 mt-5">Admin</h1>
+      <p class="lead">Welcome to the admin site! Select a section below.</p>
+      <h2 class="mt-5">Management</h2>
+      <ul>
+        <li>Accounts
+          <ul>
+            <li><a href="/admin/accounts/">List/create new accounts</a></li>
+            <li><a href="/admin/accounts/top-creators">List of top creators</a></li>
+          </ul>
+        </li>
+        <li>Public Requests
+          <ul>
+            <li><a href="/admin/requests/new/">Create new public request</a></li>
+            <li><a href="/admin/requests/">Manage content requests</a></li>
+            <li><a href="/admin/top-youtube">Top YouTube sources</a></li>
+          </ul>
+        </li>
+        <li>Content
+          <ul>
+            <li><a href="/admin/content/review/">Review content from new users</a></li>
+            <li><a href="/admin/content/list/original+is%20hot/?sort=hot">“Trending” section content</a></li>
+            <li><a href="/admin/content/list/featured/">Featured reactions</a></li>
+            <li><a href="/admin/content/list/reaction/?sort=recent">Recent reactions</a></li>
+            <li><a href="/admin/content/">Create new content</a></li>
+            <li><a href="/admin/content/search">Search index</a></li>
+          </ul>
+        </li>
+        <li>Releases
+          <ul>
+            <li><a href="/admin/releases/">Create/update release pages</a></li>
+            <li><a href="/admin/releases/monitor">Monitor release page activity</a></li>
+          </ul>
+        </li>
+        <li>Services
+          <ul>
+            <li><a href="/admin/services/">List of services</a></li>
+            <li><a href="/admin/services/email/teams/">E-mail teams</a></li>
+            <li><a href="/admin/services/slack/teams/">Slack teams</a></li>
+          </ul>
+        </li>
+      </ul>
+      <h2 class="mt-5">Tools</h2>
+      <ul>
+        <li><a href="/admin/notify">Mass notify users</a></li>
+        <li><a href="/admin/run">Task runner</a></li>
+      </ul>
+    </main>
+  </body>
+</html>

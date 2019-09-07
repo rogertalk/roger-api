@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Announcer</title>
+	</head>
+	<body>
+		<form action="/admin/announcer">
+			<span>Send announcement with account:</span>
+			<select name="identifier">
+			<option>- Pick an account -</option>
+			{% for user in users %}
+			{% with account_id = user.account.key.id()|string %}
+			<option{% if identifier == account_id %} selected{% endif %} value="{{ account_id }}">{{ user.display_name }}</option>
+			{% endwith %}
+			{% endfor %}
+			</select>
+			<button type="submit">Go</button>
+		</form>
+		{% if user %}
+		<h1>You are sending announcement as {{ user.display_name }}!</h1>
+		<p>File: <input id="payload" type="file"> (<span id="payload-info">? ms</span>)</p>
+		<p>Account list: <input id="accounts" type="file"> (<span id="accounts-info">? accounts</span>)</p>
+		<p><strong>Status:</strong> <span id="status">Initializing…</span></p>
+		<p id="send-controls" style="display: none;">
+			<label for="prime"><input id="prime" type="checkbox"> Send <strong id="prime-payload"></strong> to <strong id="prime-accounts"></strong> from <strong>{{user.display_name}}</strong></label><br>
+			<button disabled id="send">START SENDING</button>
+		</p>
+		<script>
+		var ids = ['payload', 'payload-info', 'accounts', 'accounts-info', 'status', 'send-controls', 'prime', 'prime-payload', 'prime-accounts', 'send'];
+		var elements = {};
+		ids.forEach(id => {
+			var camelCase = id.replace(/-\w/g, m => m[1].toUpperCase());
+			elements[camelCase] = document.getElementById(id);
+		});
+
+		// TODO: Support more than audio.
+		var audio = new Audio(), audioDuration = 0;
+		document.body.appendChild(audio);
+		audio.addEventListener('loadedmetadata', function () {
+			audioDuration = Math.round(this.duration * 1000);
+			elements.payloadInfo.textContent = audioDuration + ' ms';
+			audioFileState = 'selected';
+			updateStatus();
+		});
+
+		var accountIds = [], audioFile = null, audioFilePath = null, audioFileState = 'waiting';
+
+		elements.payload.addEventListener('change', function () {
+			audioDuration = 0;
+			audioFile = this.files[0];
+			audioFilePath = null;
+			audioFileState = 'waiting';
+			updateStatus();
+			audio.src = URL.createObjectURL(audioFile);
+			elements.primePayload.textContent = audioFile.name;
+		});
+
+		elements.accounts.addEventListener('change', function () {
+			accountIds = [];
+			updateStatus();
+			elements.accountsInfo.textContent = '… accounts';
+			var reader = new FileReader();
+			reader.addEventListener('load', function (event) {
+				accountIds = this.result.match(/\d+/g);
+				elements.accountsInfo.textContent = accountIds.length + ' accounts';
+				elements.primeAccounts.textContent = elements.accountsInfo.textContent;
+				updateStatus();
+			});
+			reader.readAsText(this.files[0]);
+		});
+
+		elements.prime.addEventListener('change', function () {
+			uploadFile();
+			updateStatus();
+		});
+
+		function uploadFile() {
+			if (audioFileState != 'selected') {
+				return;
+			}
+			audioFileState = 'uploading';
+			var data = new FormData();
+			data.append('payload', audioFile, audioFile.name);
+			data.append('duration', audioDuration);
+			console.log('Uploading file...');
+			fetch('/admin/announcer/prepare.json', {method: 'POST', body: data, credentials: 'same-origin'})
+				.then(r => r.json())
+				.then(data => {
+					if (audioFileState != 'uploading') {
+						console.error('Unexpected file state:', audioFileState);
+						return;
+					}
+					audioFilePath = data.path;
+					audioFileState = 'uploaded';
+					console.log('Remote file path:', audioFilePath);
+					updateStatus();
+				});
+		}
+
+		var BATCH_SIZE = 1, PARALLEL_REQUESTS = 5;
+		var accountsIndex = 0, successful = 0, failed = 0, pending = 0;
+		function flushQueue() {
+			var previousPending = pending;
+			while (pending < PARALLEL_REQUESTS) {
+				var batch = accountIds.slice(accountsIndex, accountsIndex + BATCH_SIZE);
+				if (batch.length == 0) {
+					break;
+				}
+				accountsIndex += batch.length;
+				sendAnnouncement(batch);
+				// Avoid infinite loops.
+				if (pending == previousPending) break;
+				previousPending = pending;
+			}
+			updateStatus();
+		}
+
+		elements.send.addEventListener('click', flushQueue);
+
+		function sendAnnouncement(ids) {
+			pending++;
+			var data = new FormData();
+			data.append('sender_identifier', '{{identifier}}');
+			data.append('payload', audioFilePath);
+			data.append('duration', audioDuration);
+			ids.forEach(id => data.append('identifier', id));
+			fetch('/admin/announcer/announce.json', {method: 'POST', body: data, credentials: 'same-origin'})
+				.then(r => r.json())
+				.then(data => {
+					successful += data.successful;
+					failed += data.failed;
+					pending--;
+					flushQueue();
+				})
+				.catch(error => {
+					console.error('Failed batch (' + error + '):', ids);
+					pending--;
+					flushQueue();
+				});
+		}
+
+		function updateStatus() {
+			elements.send.disabled = true;
+			var ready = (audioDuration > 0 && accountIds.length > 0);
+			if (!ready) {
+				elements.sendControls.style.display = 'none';
+				elements.status.textContent = 'Please select payload and account list files.';
+				return;
+			}
+			elements.sendControls.style.display = 'block';
+			var confirmed = elements.prime.checked;
+			if (!confirmed) {
+				elements.status.textContent = 'Please confirm configuration.';
+				return;
+			}
+			if (audioFileState != 'uploaded') {
+				elements.status.textContent = 'Preparing payload for mass sending…';
+				return;
+			}
+			if (accountsIndex == 0) {
+				elements.send.disabled = false;
+				elements.status.textContent = 'Ready! Press START SENDING to begin.';
+				return;
+			}
+			var status = 'Messaged ' + successful + ' accounts (' + failed + ' failed, ' + pending + ' pending requests)';
+			elements.status.textContent = (accountsIndex >= accountIds.length ? 'DONE! ' + status : status);
+		}
+
+		updateStatus();
+		</script>
+		{% endif %}
+	</body>
+</html>

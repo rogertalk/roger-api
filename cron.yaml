@@ -1,0 +1,20 @@
+cron:
+  - description: Import content from external sources
+    url: /_ah/cron/import_content
+    schedule: every 5 minutes
+
+  - description: Flush pending events into BigQuery.
+    url: /_ah/cron/report_to_bigquery
+    schedule: every 1 minutes
+
+  - description: Update the content reaction counts for top creators.
+    url: /_ah/cron/update_top_creators
+    schedule: every 12 hours
+
+  - description: Update the aggregated YouTube views of recently reacted content.
+    url: /_ah/cron/update_youtube_stats
+    schedule: every 24 hours synchronized
+
+  - description: Schedule updates of rewards for public content request entries.
+    url: /_ah/cron/update_content_requests
+    schedule: every 10 minutes synchronized

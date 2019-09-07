@@ -1,0 +1,17 @@
+{
+  "call.challenge_code":"Your Roger code is <break time=\".5s\"/><prosody rate=\"-20\">%(code)s</prosody><break time=\"2s\"/>Your Roger code is <break time=\".5s\"/><prosody rate=\"-20\">%(code)s</prosody>",
+  "email.challenge_code.subject":"%(code)s is your Roger verification code",
+  "email.challenge_code.body":"You can verify your Roger app now using the code: %(code)s",
+  "email.download_link.subject":"Download Roger",
+  "email.download_link.body":"Here's your link to download Roger: %(link)s",
+  "email.pli_invite.subject":"Your Roger Talk invite is here",
+  "email.pli_invite.body":"Hello!\n\nRoger, a new way to talk to the people in your life, is officially launching today! Get the new app and start talking for free. Enjoy!\n\n%(link)s \n\n- The Roger Team",
+  "email.stream_token.subject":"%(name)s just sent you a voice message using the Roger app.",
+  "email.stream_token.body":"Listen and reply at %(link)s",
+  "sms.challenge_code":"%(code)s is your Roger verification code.",
+  "sms.download_link":"Here's your link to download Roger:\n%(link)s",
+  "sms.invite":"Great news! 👋 %(name)s personally recommended you and %(others)s others for a group on the Roger app: %(link)s Tap to join the conversation 🎉",
+  "sms.invite_personal":"Hi %(to)s! 👋 %(from)s personally recommended you and %(others)s others for a group on the Roger app: %(link)s Tap to join the conversation 🎉",
+  "sms.pli_invite":"Hello!\n\nRoger is officially launching today. Get the new app and start talking for free. Enjoy!\n\n%(link)s \n\n- The Roger Team",
+  "sms.stream_token":"%(name)s just sent you a voice message using the Roger app. Listen and reply at %(link)s"
+}

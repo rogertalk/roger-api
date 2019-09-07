@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Admin » {% if service %}{{service.title}} » Teams{% else %}Uh-oh!{% endif %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
+  </head>
+  <body>
+    <div class="container">
+      <h1><a href="/admin/">Admin</a> » {% if service %}{{service.title}}{% else %}Uh-oh!{% endif %}</h1>
+      {% if error %}
+      <div class="panel panel-danger">
+        <div class="panel-heading">
+          <h3 class="panel-title">Error</h3>
+        </div>
+        <div class="panel-body">{{error}}</div>
+      </div>
+      {% endif %}
+      {% if service %}
+      <h3>Search/create team</h3>
+      <form class="form-horizontal" method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+          <label class="col-sm-2 control-label">Team Id</label>
+          <div class="col-sm-10">
+            <input name="team-id" type="text" class="form-control">
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="col-sm-offset-2 col-sm-10">
+            <div class="checkbox">
+              <label><input id="create-toggle" name="create" type="checkbox" value="yes"> Create team if it doesn't exist</label>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="col-sm-offset-2 col-sm-10">
+            <button class="btn btn-primary" id="search-or-create" type="submit">Search</button>
+          </div>
+        </div>
+      </form>
+      <script>
+      const searchOrCreate = document.getElementById('search-or-create');
+      const createToggle = document.getElementById('create-toggle');
+      createToggle.addEventListener('change', () => {
+        searchOrCreate.classList.toggle('btn-primary', !createToggle.checked);
+        searchOrCreate.classList.toggle('btn-success', createToggle.checked);
+        searchOrCreate.textContent = createToggle.checked ? 'Create' : 'Search';
+      });
+      </script>
+      <h3>Teams</h3>
+      <table class="table table-bordered table-hover">
+        <thead><tr><th>Team Id</th><th>Name</th><th>Created</th><th title="Whitelisted?">W?</th></tr></thead>
+        <tbody id="team-rows"><tr><td colspan="4">Please wait...</td></tr></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="4">
+              <nav>
+                <ul class="pager" style="margin: 0;">
+                  <li class="previous disabled"><a href="#">&larr; Previous</a></li>
+                  <li class="next disabled"><a href="#">Next &rarr;</a></li>
+                </ul>
+              </nav>
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+      <script>
+        (() => {
+          const teamRows = document.getElementById('team-rows');
+          const nextLink = teamRows.parentNode.querySelector('.next a');
+          const previousLink = teamRows.parentNode.querySelector('.previous a');
+          function teamsPath(cursor) {
+            return `${location.pathname}../teams.json?cursor=${cursor}`;
+          }
+          let nextPath = teamsPath('');
+          let currentPath, previousPath;
+          function nextPage() {
+            previousPath = currentPath;
+            currentPath = nextPath;
+            fetch(currentPath, {credentials: 'same-origin'})
+              .then((response) => response.json())
+              .then((result) => {
+                const rows = result.data.map((t) => {
+                  return `<tr><td><code>${t.id}</code></td><td><a href="/admin/services/{{service.key.id()}}/teams/${t.id}/">${t.name}</a></td><td>${new Date(t.created)}</td><td>${t.whitelisted ? 'Y' : '&nbsp;'}</td></tr>`;
+                });
+                nextPath = result.cursor ? teamsPath(result.cursor) : null;
+                nextLink.parentNode.classList.toggle('disabled', !nextPath);
+                previousLink.parentNode.classList.toggle('disabled', !previousPath);
+                teamRows.innerHTML = rows.join('\n');
+              });
+          }
+          nextPage();
+          nextLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            if (!nextPath) return;
+            nextPage();
+          });
+          previousLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            if (!previousPath) return;
+            nextPath = previousPath; // lol.
+            nextPage();
+            previousPath = null;
+          });
+        })()
+      </script>
+      {% endif %}
+    </div>
+  </body>
+</html>

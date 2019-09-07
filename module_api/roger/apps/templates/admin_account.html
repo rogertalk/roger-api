@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>{% if handler %}@{{handler.username or handler.account_id}}{% if handler.display_name and handler.display_name != handler.username %} ({{handler.display_name}}){% endif %}{% else %}Uh-oh!{% endif %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.css" integrity="sha256-CNwnGWPO03a1kOlAsGaH5g8P3dFaqFqqGFV/1nkX5OU=" crossorigin="anonymous">
+    <script src="//code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha256-3edrmyuQ0w65f8gfBsqowzjJe2iM6n0nKciPUp8y+7E=" crossorigin="anonymous"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.bundle.min.js" integrity="sha384-feJI7QwhOS+hwpX2zkaeJQjeiwlhOP+SdQDqhgvvo1DsjtiSQByFdThsxO669S2D" crossorigin="anonymous"></script>
+    <style>
+    tr.debug td, tr.debug th {
+      padding-bottom: 1px;
+      padding-top: 1px;
+    }
+    tr.inactive-24h {
+      font-size: 20px;
+    }
+    tr.inactive-10m td, tr.inactive-10m th {
+      padding-bottom: .4rem;
+      padding-top: .4rem;
+    }
+    .avatar {
+      background-color: #fafafa;
+      background-position: 50% 50%;
+      background-size: cover;
+      border-radius: 9999px;
+      object-fit: cover;
+      position: relative;
+      transition: transform 200ms;
+      z-index: 1;
+    }
+    .avatar:hover {
+      transform: scale(6);
+      z-index: 2;
+    }
+    .avatar.large:hover {
+      transform: scale(2);
+    }
+    .premium #account-image {
+      box-shadow: #ff0 0 0 10px;
+    }
+    .premium #account-name {
+      color: #ff0;
+      text-shadow: #ff0 0 0 10px;
+      -webkit-text-stroke: #ca0;
+      -webkit-text-stroke-width: 1px;
+    }
+    .premium #account-name::after {
+      content: ' 🌟';
+    }
+    .verified #account-image {
+      box-shadow: #12bdff 0 0 10px;
+    }
+    .verified #account-name {
+      color: #12bdff;
+      text-shadow: #12bdff 0 0 10px;
+      -webkit-text-stroke: #08f;
+      -webkit-text-stroke-width: 1px;
+    }
+    .verified #account-name::after {
+      content: ' ✅';
+    }
+    #account-image {
+      height: 100px;
+      width: 100px;
+    }
+    #events-table, #wallets-table table {
+      font-size: 13px;
+    }
+    .btn[name="set-quality"] {
+      border-color: rgba(0, 0, 0, .2);
+      font-size: 18px;
+      line-height: 23px;
+      text-indent: 3px;
+    }
+    .btn[name="set-quality"]:disabled {
+      background: #bfb;
+      border-color: rgba(0, 0, 0, .3);
+    }
+    </style>
+    <script>
+    function timestamp(ms) {
+      return new Date(ms).toLocaleString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+    }
+    </script>
+  </head>
+  <body class="{% if handler and handler.premium %}premium{% endif %} {% if handler and handler.verified %}verified{% endif %}">
+    <main class="container">
+      <nav aria-label="breadcrumb" class="mt-5">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/admin/">Admin</a></li>
+          <li class="breadcrumb-item"><a href="/admin/accounts/">Accounts</a></li>
+          <li class="breadcrumb-item active" aria-current="page">{% if handler %}@{{handler.username or handler.account_id}}{% else %}Uh-oh!{% endif %}</li>
+        </ol>
+      </nav>
+      <h1 class="display-4">{% if handler %}<span id="account-name">@{{handler.username or handler.account_id}}</span>{% if handler.display_name and handler.display_name != handler.username %} ({{handler.display_name}}){% endif %}{% else %}Uh-oh!{% endif %}</h1>
+      <p class="lead">Update account metadata on this page. Scroll to the bottom to see all account events.</p>
+      {% if error %}
+      <div class="alert alert-danger" role="alert">
+        <h4 class="alert-heading">Error!</h4>
+        <p class="mb-0">{{error}}</p>
+      </div>
+      {% elif not handler %}
+      <div class="alert alert-danger" role="alert">
+        <h4 class="alert-heading">Unknown state</h4>
+        <p class="mb-0">The page is in an unknown state… Better call Blixt!</p>
+      </div>
+      {% elif handler.status == 'banned' %}
+      <div class="alert alert-danger" role="alert">
+        <h4 class="alert-heading">BANNED ACCOUNT</h4>
+        <p class="mb-0">The status of this account is <strong>banned</strong> which means
+        whoever had this account is now permabanned from using the app!</p>
+      </div>
+      {% elif handler.status == 'deleted' %}
+      <div class="alert alert-danger" role="alert">
+        <h4 class="alert-heading">Deleted account</h4>
+        <p class="mb-0">The status of this account is <strong>deleted</strong> which means
+        it shouldn’t have any further use. If this is wrong, change the status
+        below!</p>
+      </div>
+      {% elif handler.status == 'unclaimed' %}
+      <div class="alert alert-info" role="alert">
+        <h4 class="alert-heading">Unclaimed account</h4>
+        <p class="mb-0">This account has been marked as an unclaimed account, which means
+        it’ll show up as a community page. Make sure to change the status of
+        this account to <strong>active</strong> before letting someone use it.</p>
+      </div>
+      {% elif handler.admin %}
+      <div class="alert alert-dark" role="alert">
+        <h4 class="alert-heading">Watch out guys, we’re dealing with a badass over here</h4>
+        <p class="mb-0">This account is an <strong>administrator</strong> and has the ability to perform more actions than normal accounts (such as performing requests on behalf of other users).</p>
+      </div>
+      {% endif %}
+      {% if handler %}
+      <h3>Metadata</h3>
+      <form method="POST" enctype="multipart/form-data">
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Account Id</label>
+          <div class="col-sm-10">
+            <p class="form-text">{{handler.account_id}}{% if handler.has_service('facebook') %} • <a href="https://www.facebook.com/{{handler.filter_services('facebook')[0].resource}}" target="_blank"><img src="/admin/static/fb.svg" width="24" height="24" style="vertical-align: top;"></a>{% endif %}</p>
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Demographic</label>
+          <div class="col-sm-10">
+            <p class="form-text">{{handler.gender or 'N/A'}} born {{handler.birthday or 'N/A'}}{% if handler.birthday %} ({{handler.birthday|years_ago}} y/o){% endif %}{% if handler.created %}, signed up <mark title="{{handler.created}}">{{handler.created.date()}}</mark> ({{handler.account_age|pretty}} ago){% endif %}</p>
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Last Active</label>
+          <div class="col-sm-10">
+            <p class="form-text"><mark>{{handler.last_active}}</mark> on <code>{{handler.last_active_client}}</code></p>
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Content</label>
+          <div class="col-sm-10">
+            <p class="form-text text-muted">
+              <a href="/admin/content/list/reaction/?by={{handler.account_id}}">Reactions ({{handler.content_count|pretty}})</a>
+              • <span class="text-dark">Streak: {{handler.streak_count|pretty}} (Max: {{handler.streak_max|pretty}})</span>
+              • <a href="/admin/content/list/original/?by={{handler.account_id}}">Originals</a>
+              {% if handler.content_reaction_count %}
+              • <span class="text-dark">{{handler.content_reaction_count|pretty}} reactions to originals</span>
+              {% endif %}
+              {% if handler.youtube_reaction_views %}
+              • <span class="text-dark">{{handler.youtube_reaction_views|pretty}} aggregate YouTube views</span>
+              {% endif %}
+              <br>
+              <small>
+                <a data-recount-id="{{handler.account_id}}" href="#">Count originals</a>
+                • <a data-youtube-views-id="{{handler.account_id}}" href="#">Update aggregate YouTube views</a>
+                (<a data-youtube-views-repair-id="{{handler.account_id}}" href="#" title="Repair count">R</a>)
+              </small>
+            </p>
+          </div>
+        </div>
+        {% if handler.has_service('youtube') or handler.youtube_channel_id %}
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">YouTube Channel</label>
+          <div class="col-sm-10">
+            <p class="form-text text-muted">
+              {% if handler.youtube_channel_id %}
+              <a href="https://www.youtube.com/channel/{{handler.youtube_channel_id}}" target="_blank">
+              {% if handler.youtube_channel_title %}
+              {% if handler.youtube_channel_thumb_url %}<img class="avatar" src="{{handler.youtube_channel_thumb_url}}" width="19" height="19">{% endif %}
+              {{handler.youtube_channel_title}}
+              {% else %}
+              https://www.youtube.com/channel/{{handler.youtube_channel_id}}
+              {% endif %}
+              </a> ({% if handler.youtube_subs is none %}subs hidden{% else %}{{handler.youtube_subs|pretty}} subs{% endif %}{% if handler.youtube_channel_views is not none %}, {{handler.youtube_channel_views|pretty}} views{% endif %}) |
+              {% endif %}
+              {% if handler.has_service('youtube') %}
+              <a data-update-youtube-channel="{{handler.account_id}}" href="#">Update</a>
+              {% else %}
+              <span class="text-danger">Disconnected!</span>
+              {% endif %}
+            </p>
+          </div>
+        </div>
+        {% endif %}
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Graph</label>
+          <div class="col-sm-10">
+            <p class="form-text text-muted"><a href="./threads/">Recent DMs</a> • <span class="text-dark">{{handler.follower_count|pretty}} Subscribers</span> • <span class="text-dark">{{handler.following_count|pretty}} Subscriptions</span>{% if handler.blocked_by %} • <a class="text-danger" href="#block">Blocked by {{handler.blocked_by|length|pretty}} account(s)</a>{% endif %}</p>
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Display Name</label>
+          <div class="col-sm-10">
+            <div class="input-group">
+              <input name="change-display-name" type="text" class="form-control" placeholder="No name set" value="{{handler.stored_display_name or ''}}">
+              <div class="input-group-append">
+                <button class="btn btn-success" type="submit">Change name</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Status</label>
+          <div class="col-sm-10">
+            <div class="input-group">
+              <select class="form-control" name="set-status">
+                {% for status in valid_statuses %}
+                <option{% if status == handler.status %} selected{% endif %}>{{status}}</option>
+                {% endfor %}
+              </select>
+              <div class="input-group-append">
+                <button class="btn btn-success" type="submit">Change</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Image</label>
+          <div class="col-sm-10">
+            <div class="large avatar" id="account-image" style="background-image: url({{handler.image_url or ''}});"></div>
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label"></label>
+          <div class="col-sm-10">
+            <div class="input-group">
+              <input type="file" class="form-control" name="image" accept="image/*">
+              <div class="input-group-append">
+                <button class="btn btn-success" type="submit">Change image</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Quality</label>
+          <div class="col-sm-10">
+            <div class="btn-group" role="group">
+              <button class="btn btn-light"{% if handler.quality_has_been_set and handler.quality == 0 %} disabled{% endif %} name="set-quality" type="submit" value="0">1️⃣</button>
+              <button class="btn btn-light"{% if handler.quality_has_been_set and handler.quality == 1 %} disabled{% endif %} name="set-quality" type="submit" value="1">2️⃣</button>
+              <button class="btn btn-light"{% if handler.quality_has_been_set and handler.quality == 2 %} disabled{% endif %} name="set-quality" type="submit" value="2">3️⃣</button>
+              <button class="btn btn-light"{% if handler.quality_has_been_set and handler.quality == 3 %} disabled{% endif %} name="set-quality" type="submit" value="3">4️⃣</button>
+              <button class="btn btn-light"{% if handler.quality_has_been_set and handler.quality == 4 %} disabled{% endif %} name="set-quality" type="submit" value="4">🤩</button>
+            </div>
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Verified?</label>
+          <div class="col-sm-10">
+            <p class="form-text">
+              {% if handler.verified %}
+              Yes ✅ <button class="btn btn-secondary btn-sm" name="set-verified" type="submit" value="false">Change to No</button>
+              {% else %}
+              No <button class="btn btn-secondary btn-sm" name="set-verified" type="submit" value="true">Change to Yes</button>
+              {% endif %}
+            </p>
+          </div>
+        </div>
+        {% if handler.premium %}
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Premium?</label>
+          <div class="col-sm-10">
+            <p class="form-text">
+              {% if handler.premium %}
+              Yes 🌟 <button class="btn btn-secondary btn-sm" name="set-premium" type="submit" value="false">Change to No</button>
+              {% else %}
+              No <button class="btn btn-secondary btn-sm" name="set-premium" type="submit" value="true">Change to Yes</button>
+              {% endif %}
+            </p>
+          </div>
+        </div>
+        {% endif %}
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Properties</label>
+          <div class="col-sm-10">
+            <p class="form-text"><pre id="properties-json">{{properties}}</pre></p>
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Update properties</label>
+          <div class="col-sm-10">
+            <textarea class="form-control" id="properties-field" name="properties" placeholder="{&quot;instagram&quot;: &quot;bob&quot;}" rows="3" style="font-family: monospace;">{}</textarea>
+            <p class="help-block">Enter JSON to merge into properties. For example, <code>{"instagram": "bob"}</code> will update the Instagram username. Unset properties by setting value to <code>null</code>. <strong>Don’t specify all properties, only the ones you want to change!</strong></p>
+            <p><button class="btn btn-success" type="submit">Update</button> <button class="btn btn-secondary" id="properties-unset" type="button">Unset all properties</button></p>
+          </div>
+        </div>
+        <script>
+        (function () {
+          const propsValue = document.getElementById('properties-json');
+          const propsField = document.getElementById('properties-field');
+          if (!propsValue || !propsField) return;
+          // Inject links and clickable property names in the prettified JSON output.
+          let html = propsValue.innerHTML;
+          const r1 = ($0, quot, url) => `${quot}<a href="${url}" target="_blank">${url}</a>${quot}`;
+          html = html.replace(/("|&#34;|&quot;)(https?:\/\/(?:(?!\1).)+)\1/g, r1);
+          const r2 = ($0, pre, $2, name, post) => `${pre}<a class="text-dark" data-set-property="${name}" href="#">${name}</a>${post}`;
+          html = html.replace(/^(\s*("|&#34;|&quot;))((?:(?!\2).)+)(\2:)/gm, r2);
+          propsValue.innerHTML = html;
+          // Make clickable property names work.
+          const setProps = document.querySelectorAll('[data-set-property]');
+          for (const el of setProps) {
+            el.addEventListener('click', e => {
+              e.preventDefault();
+              e.stopPropagation();
+              const name = e.target.dataset.setProperty;
+              const o = {[name]: JSON.parse(propsValue.textContent)[name]};
+              propsField.value = JSON.stringify(o, null, '  ');
+            });
+          }
+          // Implement the "Unset all properties" button.
+          const unset = document.getElementById('properties-unset');
+          if (unset) {
+            unset.addEventListener('click', e => {
+              e.preventDefault();
+              e.stopPropagation();
+              let value = JSON.parse(propsValue.textContent);
+              value = Object.keys(value).reduce((o, k) => (o[k] = null) || o, {});
+              propsField.value = JSON.stringify(value, null, '  ');
+            });
+          }
+        })();
+        </script>
+      </form>
+      <h3 id="identifiers">Identifiers</h3>
+      {% for identifier in handler.identifiers %}
+      <p>
+        <form method="POST">
+          {{identifier|link_identifier|safe}}
+          {% if loop.length > 1 %}
+          <button class="btn btn-sm btn-danger" name="remove-identifier" value="{{identifier}}"><span class="oi oi-trash"></span></button>
+          {% if loop.index > 1 %}<button class="btn btn-sm btn-primary" name="set-primary-identifier" value="{{identifier}}"><span class="oi oi-arrow-top"></span></button>{% endif %}
+          {% endif %}
+        </form>
+      </p>
+      {% endfor %}
+      <form method="POST">
+        <input name="rebuild-identifiers" type="hidden" value="1">
+        <p><button class="btn btn-sm btn-danger" type="submit"><span class="oi oi-loop-circular"></span> Rebuild identifiers list</button></p>
+      </form>
+      <p>
+        <form class="form-inline" method="POST">
+          <div class="input-group">
+            <input name="add-identifier" type="text" class="form-control form-control-sm" placeholder="New identifier">
+            <div class="input-group-append">
+              <button class="btn btn-sm btn-success">Add</button>
+            </div>
+          </div>
+        </form>
+      </p>
+      {% if handler.status == 'bot' %}
+      <h3>Bot</h3>
+      <p>This account is marked as a bot but they have been deprecated.</p>
+      {% endif %}
+      <h3>Wallets</h3>
+      <table class="table table-bordered table-hover" id="wallets-table">
+        <thead>
+          <tr>
+            <th>Id</th>
+            <th width="240">Last Update</th>
+            <th class="text-right">Balance</th>
+            <th>Comment</th>
+            <th class="text-center" width="80"></th>
+          </tr>
+        </thead>
+        <tbody id="wallets-rows"><tr><td colspan="5">Please wait...</td></tr></tbody>
+      </table>
+      <script>
+      const primaryWalletId = {% if handler.wallet %}'{{handler.wallet.id()}}'{% else %}null{% endif %};
+      const walletsRows = document.getElementById('wallets-rows');
+      function fetchWallets() {
+        const xhr = new XMLHttpRequest();
+        xhr.addEventListener('load', function () {
+          const data = JSON.parse(this.responseText);
+          let rows = '';
+          for (let i = 0; i < data.wallets.length; i++) {
+            const wallet = data.wallets[i];
+            rows += `<tr data-wallet="${wallet.id}">`;
+            rows += `<td style="${wallet.id == primaryWalletId ? 'font-weight: bold;' : ''}"><code>${wallet.id}</code></td>`;
+            rows += `<td title="Created: ${new Date(wallet.created)}">${timestamp(wallet.updated)}</td>`;
+            rows += `<td class="text-right" title="+${wallet.total_received} -${wallet.total_sent}">${wallet.balance}</td>`;
+            rows += `<td style="white-space: normal;">${wallet.comment.replace('<', '&lt;')}</td>`;
+            if (!wallet.id.match(/^(admin_|itunes_)/)) {
+              rows += `<td class="text-center"><form method="POST"><input name="add-100-to-wallet" type="hidden" value="${wallet.id}"><button class="btn btn-sm btn-success" onclick="return confirm('Continue?')" type="submit">+100</button></form></td>`;
+            } else {
+              rows += `<td class="text-center">&nbsp;</td>`;
+            }
+            rows += `</tr>\n`;
+          }
+          walletsRows.innerHTML = rows || '<tr><td colspan="5">This account has no wallets.</td></tr>';
+        });
+        xhr.open('GET', '/admin/wallets.json?account_id={{handler.account_id}}');
+        xhr.send();
+      }
+      fetchWallets();
+      function fetchWalletTransactions(walletId) {
+        const href = `/admin/wallet_transactions.json?wallet_id=${walletId}`;
+        return fetch(href, {credentials: 'include'})
+          .then(r => r.json())
+          .then(data => data.transactions);
+      }
+      const loadedWalletIds = new Set();
+      walletsRows.addEventListener('click', async e => {
+        if (e.target.nodeName == 'BUTTON') {
+          e.stopPropagation();
+          return;
+        }
+        let tr = e.target;
+        while (tr && tr.nodeName != 'TR') tr = tr.parentNode;
+        if (!tr || !tr.dataset.wallet || loadedWalletIds.has(tr.dataset.wallet)) return;
+        loadedWalletIds.add(tr.dataset.wallet);
+        const container = document.createElement('tr');
+        container.innerHTML = '<td colspan="5">Please wait...</td>';
+        walletsRows.insertBefore(container, tr.nextSibling);
+        const txs = await fetchWalletTransactions(tr.dataset.wallet);
+        let html = '';
+        html += `<td colspan="5">\n`;
+        html += `<table class="table table-sm table-bordered table-striped">\n`;
+        html += `<thead><tr><th width="60">Id</th><th width="190">Timestamp</th><th>From</th><th>To</th><th class="text-right" width="60">Change</th><th>Comment</th></tr></thead>\n`;
+        html += `<tbody>\n`;
+        for (let tx of txs) {
+          html += `<tr>`;
+          html += `<td title="${tx.id}"><code>${tx.id.substr(0, 6)}…</code></td>`;
+          html += `<td>${timestamp(tx.timestamp)}</td>`;
+          html += `<td><a href="/admin/accounts/${tx.sender.id}/" title="Wallet: ${tx.sender_wallet_id}">@${tx.sender.username}</a></td>`;
+          html += `<td><a href="/admin/accounts/${tx.receiver.id}/" title="Wallet: ${tx.receiver_wallet_id}">@${tx.receiver.username}</a></td>`;
+          html += `<td class="text-right" style="color: #${tx.delta < 0 ? 'c00' : '0a0'};" title="${tx.old_balance} -> ${tx.new_balance}">${tx.delta > 0 ? '+' + tx.delta : tx.delta}</td>`;
+          html += `<td class="text-truncate" title="${tx.comment.replace('"', '&quot;').replace('<', '&lt;')}">${tx.comment.replace('<', '&lt;')}</td>`;
+          html += `</tr>\n`;
+        }
+        html += `</tbody>\n`;
+        html += `</table>\n`;
+        html += `</td>`;
+        container.innerHTML = html;
+      });
+      </script>
+      <h3>Service connections</h3>
+      <table class="table table-bordered table-hover">
+        <thead><tr><th>Service</th><th width="360">Last Refresh</th><th width="50"></th></tr></thead>
+        <tbody id="service-info-rows"><tr><td colspan="3">Please wait...</td></tr></tbody>
+      </table>
+      <script>
+      var serviceRows = document.getElementById('service-info-rows');
+      function fetchServiceInfo() {
+        var xhr = new XMLHttpRequest();
+        xhr.addEventListener('load', function () {
+          var data = JSON.parse(this.responseText);
+          var rows = '';
+          for (var i = 0; i < data.services.length; i++) {
+            var service = data.services[i];
+            var serviceHTML = service.title;
+            if (service.team) {
+              serviceHTML += ` (<a href="/admin/services/${service.id}/teams/${service.team.id}/">${service.team.name}</a>)`;
+            }
+            rows += '<tr data-service="' + service.id + '" data-refresh="' + (service.refresh_token || '') + '">';
+            rows += '<td><img class="avatar" src="' + service.image_url + '" width="30" height="30"> ' + serviceHTML + '</td>';
+            rows += '<td>' + new Date(service.last_refresh) + '</td>';
+            const info = JSON.stringify(service.properties, null, 2).replace(/"/g, '&quot;').replace(/([\\'])/g, '\\$1').replace(/\n/g, '\\n');
+            rows += '<td><button class="btn btn-secondary btn-sm" onclick="alert(\'' + info + '\')"><span class="oi oi-info"></span></button></td>';
+            rows += '</tr>\n';
+          }
+          serviceRows.innerHTML = rows || '<tr><td colspan="3">This account has no connected services.</td></tr>';
+        });
+        xhr.open('GET', '/admin/service-info.json?account_id={{handler.account_id}}');
+        xhr.send();
+        serviceRows.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var t = e.target;
+          while (t && t.nodeName != 'TR') t = t.parentNode;
+          if (!t || t.dataset.service != 'youtube' || !t.dataset.refresh) return;
+          var xxhr = new XMLHttpRequest();
+          xxhr.addEventListener('load', function () {
+            var data = JSON.parse(this.responseText);
+            alert(JSON.stringify(data, null, 2));
+          });
+          xxhr.open('GET', 'https://upload.reaction.cam/v2/channel?youtube_token=' + t.dataset.refresh);
+          xxhr.setRequestHeader('Authorization', 'Bearer zCuB4oc_P7bKwqvQTdYEP9rQXdIGkHF0LBC87hfuuT8oIB8');
+          xxhr.send();
+        });
+      }
+      fetchServiceInfo();
+      </script>
+      <h3>Push notifications</h3>
+      <table class="table table-bordered table-hover">
+        <thead>
+          <tr>
+            <th width="360">Registered</th>
+            <th>Device</th>
+            <th class="text-right">Stats</th>
+            <th class="text-right" width="50">API</th>
+            <th class="text-center" width="50">&nbsp;</th>
+          </tr>
+        </thead>
+        <tbody id="push-info-rows"><tr><td colspan="5">Please wait...</td></tr></tbody>
+      </table>
+      <script>
+      var models = {
+        'iPad1,1': 'iPad',
+        'iPad1,2': 'iPad 3G',
+        'iPad2,1': 'iPad 2 (Wi-Fi Only)',
+        'iPad2,2': 'iPad 2 (GSM)',
+        'iPad2,3': 'iPad 2 (CDMA)',
+        'iPad2,4': 'iPad 2 (Wi-Fi Only, Rev A)',
+        'iPad2,5': 'iPad mini (Wi-Fi Only)',
+        'iPad2,6': 'iPad mini (GSM)',
+        'iPad2,7': 'iPad mini (CDMA)',
+        'iPad3,1': 'iPad 3rd Gen (Wi-Fi Only)',
+        'iPad3,2': 'iPad 3rd Gen (CDMA)',
+        'iPad3,3': 'iPad 3rd Gen (GSM)',
+        'iPad3,4': 'iPad 4th Gen (Wi-Fi Only)',
+        'iPad3,5': 'iPad 4th Gen (GSM/LTE)',
+        'iPad3,6': 'iPad 4th Gen (GSM/CDMA/LTE)',
+        'iPad4,1': 'iPad Air (Wi-Fi Only)',
+        'iPad4,2': 'iPad Air (CDMA/GSM/LTE)',
+        'iPad4,3': 'iPad Air (China)',
+        'iPad4,4': 'iPad mini 2 (Wi-Fi Only)',
+        'iPad4,5': 'iPad mini 2 (CDMA/GSM/LTE)',
+        'iPad4,6': 'iPad mini 2 (China)',
+        'iPad4,7': 'iPad mini 3 (Wi-Fi Only)',
+        'iPad4,8': 'iPad mini 3 (CDMA/GSM/LTE)',
+        'iPad4,9': 'iPad mini 3 (China)',
+        'iPad5,1': 'iPad mini 4 (Wi-Fi Only)',
+        'iPad5,2': 'iPad mini 4 (CDMA/GSM/LTE)',
+        'iPad5,3': 'iPad Air 2 (Wi-Fi Only)',
+        'iPad5,4': 'iPad Air 2 (CDMA/GSM/LTE)',
+        'iPad6,3': 'iPad Pro 9.7-Inch (Wi-Fi Only)',
+        'iPad6,4': 'iPad Pro 9.7-Inch (CDMA/GSM/LTE)',
+        'iPad6,7': 'iPad Pro 12.9-Inch (Wi-Fi Only)',
+        'iPad6,8': 'iPad Pro 12.9-Inch (CDMA/GSM/LTE)',
+        'iPad6,11': 'iPad 9.7-Inch 5th Gen (Wi-Fi Only)',
+        'iPad6,12': 'iPad 9.7-Inch 5th Gen (CDMA/GSM/LTE)',
+        'iPhone1,1': 'iPhone (1st Gen)',
+        'iPhone1,2': 'iPhone 3G',
+        'iPhone2,1': 'iPhone 3GS',
+        'iPhone3,1': 'iPhone 4 (GSM)',
+        'iPhone3,2': 'iPhone 4 (GSM, Rev A)',
+        'iPhone3,3': 'iPhone 4 (CDMA)',
+        'iPhone4,1': 'iPhone 4S',
+        'iPhone5,1': 'iPhone 5 (GSM)',
+        'iPhone5,2': 'iPhone 5 (CDMA/GSM)',
+        'iPhone5,3': 'iPhone 5c (GSM)',
+        'iPhone5,4': 'iPhone 5c (Global)',
+        'iPhone6,1': 'iPhone 5s (GSM)',
+        'iPhone6,2': 'iPhone 5s (Global)',
+        'iPhone7,1': 'iPhone 6 Plus',
+        'iPhone7,2': 'iPhone 6',
+        'iPhone8,1': 'iPhone 6s',
+        'iPhone8,2': 'iPhone 6s Plus',
+        'iPhone8,3': 'iPhone SE (CDMA/GSM)',
+        'iPhone8,4': 'iPhone SE (GSM)',
+        'iPhone9,1': 'iPhone 7 (Verizon/Sprint)',
+        'iPhone9,2': 'iPhone 7 Plus (Verizon/Sprint)',
+        'iPhone9,3': 'iPhone 7 (AT&T/T-Mobile)',
+        'iPhone9,4': 'iPhone 7 Plus (AT&T/T-Mobile)',
+        'iPhone10,1': 'iPhone 8',
+        'iPhone10,2': 'iPhone 8 Plus',
+        'iPhone10,3': 'iPhone X',
+        'iPhone10,4': 'iPhone 8',
+        'iPhone10,5': 'iPhone 8 Plus',
+        'iPhone10,6': 'iPhone X',
+        'iPod1,1': 'iPod touch (1st Gen)',
+        'iPod2,1': 'iPod touch (2nd Gen)',
+        'iPod3,1': 'iPod touch (3rd Gen)',
+        'iPod4,1': 'iPod touch (4th Gen)',
+        'iPod5,1': 'iPod touch (5th Gen)',
+        'iPod7,1': 'iPod touch (6th Gen)'
+      };
+      var matchUserAgent = /^([^/ ]+)\/(\d+)\b.*?\bModel\/([^ ]+)/;
+      function getUserAgentInfo(userAgent) {
+        const match = matchUserAgent.exec(userAgent);
+        if (!match) return null;
+        return {
+          appId: match[1],
+          appVersion: match[2],
+          modelId: match[3],
+          modelName: models[match[3]] || match[3],
+        };
+      }
+      var pushInfoRows = document.getElementById('push-info-rows');
+      function fetchPushInfo() {
+        var xhr = new XMLHttpRequest();
+        xhr.addEventListener('load', function () {
+          var data = JSON.parse(this.responseText);
+          var rows = '';
+          for (var i = 0; i < data.devices.length; i++) {
+            var device = data.devices[i];
+            var info = getUserAgentInfo(device.device_info);
+            rows += '<tr>';
+            rows += '<td>';
+            rows += new Date(device.created);
+            if (device.environment) {
+              rows += '<br><code>' + device.environment + '</code>';
+            }
+            rows += '</td>';
+            rows += '<td class="text-truncate">';
+            rows += (device.device_id || '<em>No identifier</em>');
+            if (info) {
+              rows += '<br><strong>' + info.modelName + '</strong>';
+            }
+            if (device.device_info) {
+              rows += '<br><small><code>' + device.device_info + '</code></small>';
+            }
+            rows += '</td>';
+            rows += '<td class="text-right">';
+            rows += '<span style="color: green;" title="Last success: ' + new Date(device.last_success) + '">' + device.total_successes.toLocaleString() + '</span>';
+            rows += '<br>'
+            rows += '<span style="color: red;" title="Total failures">' + device.total_failures.toLocaleString() + '</span>';
+            rows += '<br>'
+            rows += '<span style="color: red;" title="Failures in a row">' + device.failures + '</span>';
+            rows += '</td>';
+            rows += '<td class="text-right">' + device.api_version + '</td>';
+            rows += '<td class="text-center"><button class="btn btn-secondary btn-sm" onclick="alert(\'' + device.token + '\')"><span class="oi oi-info"></span></button></td>'
+            rows += '</tr>\n';
+          }
+          pushInfoRows.innerHTML = rows || '<tr><td colspan="5">This account has no devices registered.</td></tr>';
+        });
+        xhr.open('GET', '/admin/push-info.json?account_id={{handler.account_id}}');
+        xhr.send();
+      }
+      fetchPushInfo();
+      </script>
+      <h3 id="block">Block</h3>
+      <form class="form-horizontal" method="POST">
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Blocked By</label>
+          <div class="col-sm-10">
+            <p class="form-text">
+            {% for key in handler.blocked_by %}
+            <a href="/admin/accounts/{{ key.id() }}/">{{ key.id() }}</a>{% if not loop.last %},{% endif %}
+            {% else %}
+            <em>No one</em>
+            {% endfor %}
+            </p>
+          </div>
+        </div>
+      </form>
+      <form class="form-horizontal" method="POST">
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Unblock a User</label>
+          <div class="col-sm-10">
+            <div class="input-group">
+              <input name="unblock-identifier" type="text" class="form-control" placeholder="Username or account id">
+              <div class="input-group-append">
+                <button class="btn btn-success" type="submit">Unblock</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+      <h3>Password</h3>
+      <form class="form-horizontal" method="POST">
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">New Password</label>
+          <div class="col-sm-10">
+            <input type="password" name="password" class="form-control">
+            {% if handler.has_password %}
+            <p class="help-block">This user already has a password set.</p>
+            {% else %}
+            <p class="help-block">This user does NOT have a password set.</p>
+            {% endif %}
+          </div>
+        </div>
+        <div class="form-group row">
+          <div class="offset-sm-2 col-sm-10">
+            <button class="btn btn-danger" onclick="return confirm('This will force the user to use this password to log in.')" type="submit">OVERRIDE PASSWORD</button>
+          </div>
+        </div>
+      </form>
+      <h3>Location</h3>
+      <form class="form-horizontal" method="POST" enctype="multipart/form-data">
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Last update</label>
+          <div class="col-sm-10">
+            <p class="form-text">{{handler.location_info.timestamp}}</p>
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Lat/Long</label>
+          <div class="col-sm-10">
+            <input type="text" name="location-latlng" class="form-control" placeholder="12.3,45.6" value="{{handler.location_info.location}}">
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">City</label>
+          <div class="col-sm-10">
+            <input type="text" name="location-city" class="form-control" value="{{handler.location_info.city}}">
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Country</label>
+          <div class="col-sm-10">
+            <input type="text" name="location-country" class="form-control" value="{{handler.location_info.country}}">
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Time zone</label>
+          <div class="col-sm-10">
+            <input type="text" name="location-timezone" class="form-control" value="{{handler.location_info.timezone}}">
+          </div>
+        </div>
+        <div class="form-group row">
+          <div class="offset-sm-2 col-sm-10">
+            <div class="checkbox">
+              <script>
+              function updateCustomLocationFields(useCustom) {
+                ['location-city', 'location-country', 'location-timezone'].map(function (name) {
+                  return document.querySelector('input[name=' + name + ']');
+                }).forEach(function (field) {
+                  field.disabled = !useCustom;
+                });
+              }
+              updateCustomLocationFields(false);
+              </script>
+              <label><input name="location-custom" onchange="updateCustomLocationFields(this.checked)" type="checkbox" value="yes"> Use custom fields instead of lookup</label>
+            </div>
+          </div>
+        </div>
+        <div class="form-group row">
+          <div class="offset-sm-2 col-sm-10">
+            <button class="btn btn-success" type="submit">Set Location</button>
+          </div>
+        </div>
+      </form>
+      <h3>Events</h3>
+      <table class="table table-hover" id="events-table">
+        <thead>
+          <tr>
+            <th width="200">Timestamp/Client</th>
+            <th width="250">Event</th>
+            <th colspan="2">Properties</th>
+          </tr>
+        </thead>
+        <tbody id="events"></tbody>
+      </table>
+      <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+      <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+      <script>
+      let nextPagePath = '/admin/events.json?account_id={{handler.account_id}}';
+      function loadNextPage() {
+        if (!nextPagePath) return;
+        let path = nextPagePath;
+        nextPagePath = null;
+        var xhr = new XMLHttpRequest();
+        xhr.addEventListener('error', function () {
+          nextPagePath = path;
+        });
+        let lastEventTime;
+        xhr.addEventListener('load', function () {
+          const result = JSON.parse(this.responseText);
+          result.data.forEach((event) => {
+            if (lastEventTime) {
+              // Add divider between events that are a significant amount of time apart.
+              const delta = lastEventTime - event.timestamp;
+              if (delta > 86400000) {
+                // 24 hours
+                $('#events').append($('<tr class="inactive-24h">').append($('<td colspan="4">').text('🏙🌇🌃🌆🏙')));
+              } else if (delta > 28800000) {
+                // 8 hours
+                $('#events').append($('<tr class="inactive-8h">').append($('<td colspan="4">').text('😴')));
+              } else if (delta > 3600000) {
+                // 1 hour
+                $('#events').append($('<tr class="inactive-1h">').append($('<td colspan="4">')));
+              } else if (delta > 600000) {
+                // 10 minutes
+                $('#events').append($('<tr class="inactive-10m">').append($('<td colspan="4">')));
+              }
+            }
+            lastEventTime = event.timestamp;
+            const timestampElement = $('<span>').text(timestamp(event.timestamp));
+            if (event.repeats > 1) {
+              timestampElement.append(`<br><small>(repeated ${event.repeats} times)</small><br>`);
+              timestampElement.append(timestamp(event.repeats_began));
+            }
+            const info = getUserAgentInfo(event.client);
+            const infoElement = $('<small>');
+            if (info) {
+              infoElement.append(
+                $('<mark>').text(`${info.appId} ${info.appVersion}`),
+                ' ',
+                $('<abbr>').attr('title', event.client).text(info.modelName));
+            } else {
+              infoElement.append($('<code>').text(event.client));
+            }
+            const entries = Object.entries(event.properties)
+              .map(([k, v]) => [k, v instanceof Object ? JSON.stringify(v) : v.toLocaleString()])
+              .sort((a, b) => a[0] < b[0] ? -1 : (a[0] == b[0] ? 0 : 1));
+            const rowSpan = Math.max(entries.length, 1);
+            const isDebug = (event.class == 'debug');
+            const className = isDebug ? 'debug' : 'table-' + event.class;
+            $('#events').append(
+              $('<tr>').addClass(className).append(
+                $('<td class="text-truncate">').attr('rowspan', rowSpan).append(isDebug ? timestampElement : [timestampElement, $('<br>'), infoElement]),
+                $('<td>').attr('rowspan', rowSpan).text(event.name),
+                entries.length > 0 ? [$('<th>').text(entries[0][0]), $('<td class="text-truncate">').text(entries[0][1])] : $('<td colspan="2">–</td>')));
+            for (let i = 1; i < entries.length; i++) {
+              $('#events').append(
+                $('<tr>').addClass(className).append(
+                  $('<th>').text(entries[i][0]),
+                  $('<td class="text-truncate">').text(entries[i][1])));
+            }
+          });
+          if (result.cursor) {
+            nextPagePath = '/admin/events.json?account_id={{handler.account_id}}&cursor=' + result.cursor;
+          }
+        });
+        xhr.open('GET', path);
+        xhr.send();
+      }
+      $(window).scroll(() => {
+        if ($(window).scrollTop() + $(window).height() > $(document).height() - 10) {
+          loadNextPage();
+        }
+      });
+      </script>
+      {% endif %}
+    </div>
+    <script>
+    Array.from(document.querySelectorAll('[data-utc]')).forEach(node => {
+      node.textContent = new Date(parseInt(node.dataset.utc)).toLocaleString();
+    });
+    function addJobSchedulerHandler(element, datasetKey, jobId, configureForm) {
+      const text = element.textContent;
+      let pending = false;
+      element.addEventListener('click', async function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (pending) return;
+        this.removeAttribute('href');
+        this.textContent = text + ' ⏱';
+        this.title = '';
+        pending = true;
+        try {
+          const body = new FormData();
+          await configureForm(body, this.dataset[datasetKey]);
+          const r = await fetch(`/_ah/jobs/${jobId}`, {method: 'POST', body, credentials: 'include'});
+          if (!r.ok) throw Error('Bad status: ' + r.statusText);
+          this.textContent = text + ' ✅';
+        } catch (e) {
+          console.error(e);
+          this.textContent = text + ' ⚠️';
+          this.title = `${e}`;
+        }
+        this.href = '#';
+        pending = false;
+      });
+    }
+    function setUpJobScheduler(dataAttribute, jobId, parameter, configureForm) {
+      const datasetKey = dataAttribute.replace(/-\w/g, t => t.substr(1).toUpperCase());
+      for (const element of document.querySelectorAll('[data-' + dataAttribute + ']')) {
+        addJobSchedulerHandler(element, datasetKey, jobId, parameter, configureForm);
+      }
+    }
+    setUpJobScheduler('recount-id', 'recount_originals', (f, v) => f.set('account_id', v));
+    setUpJobScheduler('update-youtube-channel', 'update_youtube_channel', (f, v) => f.set('account_id', v));
+    setUpJobScheduler('youtube-views-id', 'update_youtube_views_batched', (f, v) => f.set('creator_id', v));
+    setUpJobScheduler('youtube-views-repair-id', 'update_youtube_views_batched', (f, v) => {
+      f.set('creator_id', v);
+      f.set('repair', 'true');
+    });
+    </script>
+  </body>
+</html>

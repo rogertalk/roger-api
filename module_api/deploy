@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+
+project=roger-api
+echo -e "Deploying \x1B[97m$project\x1B[0m to \x1B[97mproduction\x1B[0m..."
+echo
+
+# Ensure that the working directory is clean.
+if [[ -n $(git status --porcelain) ]]; then
+  echo -e "\x1B[91mPlease commit or revert changes before deploying.\x1B[0m"
+  exit 1
+fi
+
+# Update remote branch.
+git fetch
+
+# Ensure that the local branch and the remote branch are in sync.
+if [[ "$(git rev-parse @)" != "$(git rev-parse @{u})" ]]; then
+  echo -e "\x1B[91mLocal and remote branch are out of sync. Please pull/push any changes.\x1B[0m"
+  exit 1
+fi
+
+# Make sure all tests pass before deploying.
+python -m scripts.run_tests
+if [[ $? -ne 0 ]]; then
+  echo
+  echo -e "\x1B[91mOne or more tests failed.\x1B[0m"
+  exit 1
+fi
+
+#echo -n "Generating source context files... "
+#gcloud --project="$project" --quiet app gen-repo-info-file
+#echo "Done"
+
+# Calculate a tag to use for the deploy.
+# TODO: First check if there's already a tag for the current commit.
+tag=""
+tag_number=1
+while true; do
+  tag="$(date -u +%Y-%m-%d)/$(printf %03d $tag_number)"
+  git rev-parse "$tag" >/dev/null 2>&1 || break
+  (( tag_number++ ))
+done
+
+echo -en "\x1B[92mReady to deploy.\x1B[0m Deploy now and tag as \"$tag\"? (Y/n) "
+
+# Confirm that the deploy should still happen.
+read answer
+case "$answer" in
+  [yY]|[yY][Ee][Ss]|"") ;;
+  *) echo -e "\x1B[91mAborting.\x1B[0m"; exit 1;;
+esac
+
+echo
+
+# Deploy to the production server.
+version="${tag//\//-}"
+gcloud --project="$project" --quiet app deploy --promote --version="$version" app.yaml
+
+# Check if deploy was successful.
+if [[ $? -ne 0 ]]; then
+  echo
+  echo -e "\x1B[91mDeploy was aborted.\x1B[0m"
+  exit 1
+fi
+
+echo
+echo -e "\x1B[92mEverything checks out.\x1B[0m Tagging and pushing the tag."
+echo
+
+git tag "$tag"
+git push --tags
+
+echo
+echo -e "\x1B[92mAll done!\x1B[0m Au revoir!"

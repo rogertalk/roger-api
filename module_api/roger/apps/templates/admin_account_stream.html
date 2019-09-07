@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>{% if stream %}{{user.display_name}} » Recents » {{stream.title or 'Untitled'}}{% else %}Uh-oh!{% endif %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
+  </head>
+  <body>
+    <div class="container">
+      <h1>{% if stream %}<a href="..">{{user.display_name or user.account_id}}</a> » <a href="./">Recents</a> » {{stream.title or 'Untitled'}}{% else %}Uh-oh!{% endif %}</h1>
+      <form action="/admin/accounts/{{user.account_id}}/streams/{{stream.key.id()}}" class="form-horizontal" method="POST">
+        <div class="form-group">
+          <label class="col-sm-2 control-label">Stream Id</label>
+          <div class="col-sm-10">
+            <p class="form-control-static">{{stream.key.id()}}</p>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="col-sm-2 control-label">Title</label>
+          <div class="col-sm-10">
+            <div class="input-group">
+              <input name="set-title" type="text" class="form-control" placeholder="No title will display as list of participants" value="{{stream.title or ''}}">
+              <span class="input-group-btn">
+                <button class="btn btn-success" type="submit">Set</button>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="col-sm-2 control-label">Visible?</label>
+          <div class="col-sm-10">
+            <p class="form-control-static">
+              {% if stream.visible %}
+              Yes <button class="btn btn-default btn-xs" name="set-visible" type="submit" value="false">Hide</button>
+              {% else %}
+              No <button class="btn btn-default btn-xs" name="set-visible" type="submit" value="true">Show</button>
+              {% endif %}
+            </p>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="col-sm-2 control-label">Third-Party Id</label>
+          <div class="col-sm-10">
+            <p class="form-control-static">
+              {% if stream.service_content_id %}
+              <code>{{stream.service_content_id|link_identifier|safe}}</code>
+              {% if stream.service_content_id.startswith('slack:') %} <button class="btn btn-xs btn-default" name="update-content-id" type="submit" value="{{stream.service_content_id}}"><span class="glyphicon glyphicon-repeat"></span> Update</button>{% endif %}
+              {% else %}
+              <em>N/A</em>
+              {% endif %}
+            </p>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="col-sm-2 control-label">Others</label>
+          <div class="col-sm-10">
+            <p class="form-control-static">
+              {% for p in stream.get_others() %}
+              <a href="/admin/accounts/{{p.key.id()}}/streams/{{stream.key.id()}}">{{p.display_name}}</a>{% if not loop.last %},{% endif %}
+              {% else %}
+              <em>No one else</em>
+              {% endfor %}
+            </p>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="col-sm-2 control-label">Attachments</label>
+          <div class="col-sm-10">
+            <p class="form-control-static">
+            {% if stream.attachments %}
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th width="130">Id</th><th>Data</th>
+                  </tr>
+                </thead>
+                <tbody>
+                {% for a in stream.attachments %}
+                  <tr>
+                    <td><code>{{a.id}}</code></td>
+                    <td><pre>{{a.public(version=34)|pretty_json}}</pre></td>
+                  </tr>
+                {% endfor %}
+                </tbody>
+              </table>
+            {% else %}
+            <em>No attachments.</em>
+            {% endif %}
+            <p>
+          </div>
+        </div>
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th width="155">Chunk id</th>
+              <th>Sender</th>
+              <th width="150">Timestamp</th>
+              <th class="text-center" title="Duration (seconds)" width="50">⏱</th>
+              <th class="text-center" title="Number of attachments" width="50">📎</th>
+              <th class="text-center" title="Number of reactions" width="50">👍</th>
+              <th class="text-center" title="Number of plays" width="50">▶️</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for chunk in stream.chunks|reverse %}
+          <tr{% if not stream.is_chunk_played(chunk) %} class="info"{% endif %}>
+            <td onclick="alert('https://storage.googleapis.com' + '{{chunk.payload}}')" class="text-nowrap"{% if not stream.is_chunk_played(chunk) %} style="font-weight:bold;"{% endif %}>{{chunk.key.id()}}{% if chunk.external_content_id %} <strong title="{{chunk.external_content_id}}">*</strong>{% endif %}</td>
+            <td>{{stream.lookup_account(chunk.sender.id()).display_name}}</td>
+            <td class="text-nowrap" title="{% if chunk.timezone %}{{chunk.timezone}}: {{chunk.localized_start.strftime('%Y-%m-%d %H:%M:%S %Z%z')}}{% else %}No location info{% endif %}">{{chunk.start.strftime('%Y-%m-%d %H:%M:%S')}}</td>
+            <td class="text-right">{{chunk.duration / 1000}}</td>
+            <td class="text-right">{{chunk.attachments|length}}</td>
+            <td class="text-right">{{chunk.reactions|length}}</td>
+            <td class="text-right">{{stream.others_played_until(chunk.end)|length}}+{{chunk.external_plays}}</td>
+          <tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </form>
+    </div>
+  </body>
+</html>

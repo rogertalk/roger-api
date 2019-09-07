@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>{% if user %}{{user.display_name}} » Threads{% else %}Uh-oh!{% endif %}</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
+	</head>
+	<body>
+		<div class="container">
+			<h1>{% if user %}<a href="..">{{user.display_name or user.account_id}}</a> » Recents{% else %}Uh-oh!{% endif %}</h1>
+			{% if error %}
+			<div class="panel panel-danger">
+				<div class="panel-heading">
+					<h3 class="panel-title">Error</h3>
+				</div>
+				<div class="panel-body">{{error}}</div>
+			</div>
+			{% endif %}
+			<form method="POST">
+				<p>
+					<span>With selected threads:</span>
+					<button class="btn btn-default btn-xs" name="action" value="hide" type="submit">Hide</button>
+					<button class="btn btn-default btn-xs" name="action" value="hide-for-all" type="submit">Hide for all</button>
+					<!--button class="btn btn-default btn-xs" name="action" value="leave" type="submit">Leave</button-->
+				</p>
+				<table class="table table-hover">
+					<thead>
+						<tr>
+							<th width="30"><input id="check-all" type="checkbox"></th>
+							<th width="250">Thread</th>
+							<th>Participants</th>
+							<th width="150">Last Interaction</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for thread in recents %}
+						<tr{% if not thread.is_seen %} class="info"{% endif %}>
+							<td><input name="selected" type="checkbox" value="{{thread.key.id()}}"></td>
+							<td class="text-nowrap"{% if not thread.is_seen %} style="font-weight:bold;"{% endif %}>
+								<a href="./{{thread.key.id()}}"><em>Untitled</em></a>
+							</td>
+							<td>
+								{% for p in thread.others %}
+								<a href="/admin/accounts/{{p.account.id()}}/threads/">@{{p.username}}</a>{% if not loop.last %},{% endif %}
+								{% else %}
+								<em>No one else</em>
+								{% endfor %}
+							</td>
+							<td class="text-nowrap">{{thread.last_interaction.strftime('%Y-%m-%d %H:%M:%S')}}</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</form>
+			<script>
+				const checkAll = document.getElementById('check-all');
+				checkAll.onchange = () => {
+					document.querySelectorAll('input[type=checkbox]').forEach((checkbox) => {
+						checkbox.checked = checkAll.checked;
+					});
+				};
+			</script>
+			{% if cursor %}
+			<div class="form-group clearfix">
+				<p class="clearfix">
+					<a class="btn btn-default" href="?next={{cursor}}">Next</a>
+				</p>
+			</div>
+			{% endif %}
+		</div>
+	</body>
+</html>

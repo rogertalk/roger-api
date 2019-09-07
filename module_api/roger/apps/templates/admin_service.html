@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Services » {{service.title}}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="//code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha256-3edrmyuQ0w65f8gfBsqowzjJe2iM6n0nKciPUp8y+7E=" crossorigin="anonymous"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.bundle.min.js" integrity="sha384-feJI7QwhOS+hwpX2zkaeJQjeiwlhOP+SdQDqhgvvo1DsjtiSQByFdThsxO669S2D" crossorigin="anonymous"></script>
+    <style>
+    img {
+      border-radius: 9999px;
+      object-fit: cover;
+    }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <nav aria-label="breadcrumb" class="mt-5">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/admin/">Admin</a></li>
+          <li class="breadcrumb-item"><a href="/admin/services/">Services</a></li>
+          <li class="breadcrumb-item active" aria-current="page">{{service.title}}</li>
+        </ol>
+      </nav>
+      <h1 class="display-4">{{service.title}}</h1>
+      <p class="lead">Manage this service here. Sorry, this page is pretty incomplete for now.</p>
+      <h2 class="mt-5">Metadata</h2>
+      <p>TODO</p>
+      <h2 class="mt-5">Teams</h2>
+      <p><a class="btn btn-outline-primary" href="/admin/services/{{service.key.id()}}/teams/">Go to list of teams</a></p>
+      <h2 class="mt-5">Authenticated users</h2>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Account</th>
+            <th>Service Id</th>
+            <th>Team</th>
+            <th>Authenticated</th>
+          </tr>
+        </thead>
+        <tfoot>
+          <tr>
+            <td colspan="4">TODO: Pagination.</td>
+          </tr>
+        </tfoot>
+        <tbody>
+          {% for user in users %}
+          <tr>
+            <td><img src="{{user.account.image_url}}" width="20" height="20"> <a href="/admin/accounts/{{user.account.key.id()}}/">{{user.account.username}}</a></td>
+            <td><code>{{user.auth.service_identifier}}</code></td>
+            <td>{% if user.auth.team %}<a href="/admin/services/{{service.key.id()}}/{{user.auth.service_team.id()}}/">{{user.auth.team.id()}}</a>{% endif %}</td>
+            <td>{{user.auth.last_refresh}}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>{% if by %}@{{by.username}}: {% endif %}{% for tag in tags %}{% if loop.index > 1 %} + {% endif %}{{tag}}{% endfor %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.css" integrity="sha256-CNwnGWPO03a1kOlAsGaH5g8P3dFaqFqqGFV/1nkX5OU=" crossorigin="anonymous">
+    <script src="//code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha256-3edrmyuQ0w65f8gfBsqowzjJe2iM6n0nKciPUp8y+7E=" crossorigin="anonymous"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.bundle.min.js" integrity="sha384-feJI7QwhOS+hwpX2zkaeJQjeiwlhOP+SdQDqhgvvo1DsjtiSQByFdThsxO669S2D" crossorigin="anonymous"></script>
+    <style>
+    td {
+      white-space: nowrap;
+    }
+    td.ellipsis {
+      max-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    video {
+      background: #eee;
+    }
+    .avatar {
+      background-color: #fafafa;
+      background-position: 50% 50%;
+      background-size: cover;
+      border-radius: 9999px;
+      object-fit: cover;
+      position: relative;
+      transition: transform 200ms;
+      z-index: 1;
+    }
+    .avatar:hover {
+      transform: scale(6);
+      z-index: 2;
+    }
+    .bot-rating {
+      font-size: 20px;
+      line-height: 1;
+    }
+    .bot-rating span {
+      cursor: pointer;
+      display: inline-block;
+      padding: 1px;
+    }
+    .fresh {
+      filter: grayscale(100%);
+      opacity: .4;
+    }
+    .hotness {
+      background: #fff;
+      border: #ddd solid 1px;
+      display: flex;
+      flex: auto;
+      flex-direction: row;
+      height: 90px;
+      width: 198px;
+    }
+    .hotness .column {
+      display: flex;
+      flex: auto;
+      flex-direction: column;
+      height: 100%;
+      justify-content: flex-end;
+    }
+    .hotness .column:nth-child(even) {
+      background: #eee;
+    }
+    .hotness .column .bar {
+      background: #0a0;
+      border-right: #00a300 solid 1px;
+      height: calc(var(--reactions-hour) / var(--reactions-max) * 100%);
+      width: 100%;
+    }
+    .verified {
+      color: #12bdff;
+    }
+    #assign-content-results.empty thead {
+      opacity: .5;
+    }
+    #assign-content-results:not(.empty) .empty {
+      display: none;
+    }
+    #assign-content-results:not(.loading) .loading {
+      display: none;
+    }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <nav aria-label="breadcrumb" class="mt-5">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/admin/">Admin</a></li>
+          {% if by and related_to %}
+          <li class="breadcrumb-item"><a href="/admin/content/{{related_to.key.id()}}/">{{related_to.title|capped}}</a></li>
+          <li class="breadcrumb-item"><a href="./?related_to={{related_to.key.id()}}{% if sort %}&sort={{sort}}{% endif %}">{{tags|join('+')}}</a></li>
+          <li class="breadcrumb-item active" aria-current="page">By @{{by.username}}</li>
+          {% elif by %}
+          <li class="breadcrumb-item"><a href="./{% if sort %}?sort={{sort}}{% endif %}">{{tags|join('+')}}</a></li>
+          <li class="breadcrumb-item active" aria-current="page">By @{{by.username}}</li>
+          {% elif related_to %}
+          <li class="breadcrumb-item"><a href="/admin/content/{{related_to.key.id()}}/">{{related_to.title|capped}}</a></li>
+          <li class="breadcrumb-item active" aria-current="page">{{tags|join('+')}}</li>
+          {% else %}
+          <li class="breadcrumb-item active" aria-current="page">{{tags|join('+')}}</li>
+          {% endif %}
+        </ol>
+      </nav>
+      <h1 class="display-4">Tagged {% for tag in tags %}{% if loop.index > 1 %} + {% endif %}<span class="badge badge-{{listed_tags.get(tag, 'secondary')}}">{{tag}}</span>{% endfor %}</h1>
+      <p class="lead">Choose a tag to see its list of videos. Tip: Groom the <a href="/admin/content/list/original+is%20hot/?sort=hot">trending videos from Discover</a> every now and then.</p>
+      <p>
+        {% for tag, cls in listed_tags.iteritems() %}
+        <a class="badge badge-{{cls}}" href="/admin/content/list/{{tag.replace(' ', '%20')}}/?x=x{% if by %}&by={{by.key.id()}}{% endif %}{% if sort %}&sort={{sort}}{% endif %}{% if related_to %}&related_to={{related_to.key.id()}}{% endif %}">{{tag}}</a>
+        {% endfor %}
+      </p>
+      {% if by and 'original' in tags %}
+      <h2>Assign content to @{{by.username}}</h2>
+      <p>
+        <input class="form-control" id="assign-content-input" placeholder="Paste URL or enter search query">
+      </p>
+      <form action="./?by={{by.key.id()}}" method="POST">
+        <table class="empty table" id="assign-content-results">
+          <thead>
+            <tr>
+              <th width="120">&nbsp;</th>
+              <th width="200">Creator</th>
+              <th>Title</th>
+              <th width="100">Reactions</th>
+            </tr>
+          </thead>
+          <tfoot>
+            <tr class="empty">
+              <td colspan="4"><em>Sorry, no results found.</em></td>
+            </tr>
+            <tr class="loading">
+              <td colspan="4">
+                <div class="progress">
+                  <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
+                </div>
+              </td>
+            </tr>
+          </tfoot>
+          <tbody></tbody>
+        </table>
+      </form>
+      <script>
+      (function () {
+        const input = document.getElementById('assign-content-input');
+        const table = document.getElementById('assign-content-results');
+
+        const renderEngine = {
+          searchDidBegin(query) {
+            input.classList.remove('error');
+            table.classList.remove('empty');
+            table.classList.add('loading');
+          },
+          searchDidError(query, error) {
+            input.classList.add('error');
+            table.classList.add('empty');
+            table.classList.remove('loading');
+          },
+          searchDidFinish(query, results) {
+            input.classList.remove('error');
+            table.classList.remove('loading');
+            if (!results.length) {
+              table.querySelector('tbody').innerHTML = '';
+              table.classList.add('empty');
+              return;
+            }
+            let html = '';
+            for (const c of results) {
+              html += '<tr>';
+              html += `<td><img width="96" height="54" src="${c.imageURL}" style="object-fit: cover;"></td>`;
+              html += `<td><a${c.creatorId == {{config.ANONYMOUS_ID}} ? ' class="text-secondary"' : ''} href="/admin/accounts/${c.creatorId}/">@${escapeHTML(c.creatorUsername)}</a>`;
+              if (c.creatorId != {{by.key.id()}}) {
+                html += `<br><button class="btn btn-sm ${c.originalURL ? 'btn-success' : 'btn-danger'}" name="assign-content-id" type="submit" value="${c.id}">Assign to @{{by.username}}</button>`                
+              }
+              html += '</td>';
+              let displayTitle = c.title;
+              if (displayTitle && displayTitle.length >= 90) displayTitle = displayTitle.substr(0, 85).trim() + '…';
+              html += `<td><a href="/admin/content/${c.id}/" title="${escapeHTML(c.title || 'Untitled')}">${displayTitle ? escapeHTML(displayTitle) : '<em>Untitled</em>'}</a><br>`;
+              if (c.originalURL) {
+                let displayURL = c.originalURL;
+                if (displayURL.length >= 90) displayURL = displayURL.substr(0, 85).trim() + '…';
+                html += `<span class="text-secondary" title="${escapeHTML(c.originalURL)}">${displayURL} <a href="${escapeHTML(c.originalURL)}" target="_blank">↗️</a></span>`;
+              } else {
+                html += '<span class="text-danger"><strong>Note:</strong> This is a reaction, so double check it before assigning it.</span>';
+              }
+              html += '</td>';
+              html += `<td class="text-right"><a href="/admin/content/list/reaction/?related_to=${c.id}">${c.reactionCount.toLocaleString()}</a></td>`
+              html += '</tr>\n';
+            }
+            table.querySelector('tbody').innerHTML = html;
+          }
+        };
+
+        const searchEngine = {
+          async performSearch(query) {
+            if (!query) return [];
+            if (query.match(/^https?:/)) {
+              const c = await fetch(`https://www.reaction.cam/x/metadata?url=${escape(query)}`).then(r => r.json());
+              return [{
+                id: c.id,
+                creatorId: c.creator_id,
+                creatorUsername: c.creator_username,
+                imageURL: c.thumb_url,
+                originalURL: c.original_url,
+                reactionCount: c.reactions,
+                title: c.title,
+              }];
+            }
+            const r = await fetch(`/v53/content/search?query=${escape(query)}`).then(r => r.json());
+            const list = await Promise.all(r.data.map(c => {
+              if (c.creator) {
+                // Save one roundtrip if search result contains creator.
+                // TODO: This should always be the code path once all search results have been refreshed.
+                return {content: c, creator: c.creator};
+              }
+              return fetch(`/v53/content/${c.id}`)
+                .then(r => r.json())
+                .then(r => {
+                  if (r.error) throw Error(r.error.message);
+                  return r;
+                })
+                .catch(e => {
+                  console.error(`Could not get ${c.id}:`, e);
+                  return null;
+                });
+            }));
+            const results = [];
+            for (const r of list) {
+              if (!r) continue;
+              results.push({
+                id: r.content.id,
+                creatorId: r.creator.id,
+                creatorUsername: r.creator.username,
+                imageURL: r.content.thumb_url,
+                originalURL: r.content.original_url,
+                reactionCount: r.content.related_count,
+                title: r.content.title,
+              });
+            }
+            return results;
+          }
+        };
+
+        class Searcher {
+          constructor({renderEngine, searchEngine}) {
+            this.currentQuery = null;
+            this.r = renderEngine;
+            this.s = searchEngine;
+          }
+
+          async search(query) {
+            if (typeof query != 'string') {
+              throw Error('query must be a string');
+            }
+            query = query.replace(/^\s+|\s+$/g, '').replace(/\s+/g, ' ');
+            if (query === this.currentQuery) return;
+            this.currentQuery = query;
+            this.r.searchDidBegin(query);
+            try {
+              const results = await this.s.performSearch(query);
+              if (query !== this.currentQuery) return;
+              this.r.searchDidFinish(query, results);
+            } catch (error) {
+              if (query !== this.currentQuery) return;
+              console.error(`Search for "${query}" failed:`, error);
+              this.r.searchDidError(query, error);
+            }
+          }
+        }
+
+        function escapeHTML(text) {
+          return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;');
+        }
+
+        function setUpScheduler({delay = 100, input, searcher}) {
+          const search = () => searcher.search(input.value);
+          let timeout = 0;
+          const scheduleSearch = () => {
+            clearTimeout(timeout);
+            timeout = setTimeout(search, delay);
+          };
+          input.addEventListener('change', scheduleSearch);
+          input.addEventListener('keypress', scheduleSearch);
+          input.addEventListener('keyup', scheduleSearch);
+        }
+
+        setUpScheduler({input, searcher: new Searcher({renderEngine, searchEngine})});
+      })();
+      </script>
+      {% else %}
+      <div id="trending-content" style="display: flex; align-items: center;">
+        <a class="prev" href="#" style="display: block; text-align: center; width: 20px;">
+          <span class="oi oi-chevron-left"></span>
+        </a>
+        <div style="display: flex; flex: 1; align-items: center;">
+          <img style="border-radius: 4px; margin-right: 4px; object-fit: cover;" width="36" height="36">
+          <span>
+            <a class="title" href="#">...</a><br>
+            <span class="reactions">...</span> <span class="tags"></span>
+          </span>
+        </div>
+        <a class="next" href="#" style="display: block; text-align: center; width: 20px;">
+          <span class="oi oi-chevron-right"></span>
+        </a>
+      </div>
+      <div class="hotness mb-3" id="total-reactions"></div>
+      {% endif %}
+      {% if cache_key_format %}
+      <h2>Clear cached data</h2>
+      <form class="mb-3" id="clear-cache">
+        <div class="form-row align-items-center">
+          <div class="col-auto">
+            <input name="version" class="form-control" title="API version" type="number" value="53">
+          </div>
+          <div class="col-auto">
+            <select name="sort" class="form-control" title="Sort order">
+              {% if not by %}
+              <option value="hot"{% if cache_key_sort == 'hot' %} selected{% endif %}>Hot</option>
+              <option value="top"{% if cache_key_sort == 'top' %} selected{% endif %}>Top</option>
+              {% endif %}
+              <option value="recent"{% if cache_key_sort == 'recent' %} selected{% endif %}>Recent</option>
+            </select>
+          </div>
+          <div class="col-auto">
+            <input name="limit" class="form-control" title="Page size (limit)" type="number" value="{{cache_key_limit}}">
+          </div>
+          <div class="col-auto">
+            <button class="btn btn-light" type="submit">Clear <code id="clear-cache-key"></code></button>
+          </div>
+        </div>
+      </form>
+      <script>
+      function formatKey(version, sort, limit) {
+        return {{cache_key_format}};
+      }
+      const clearCacheForm = document.getElementById('clear-cache');
+      function getKey() {
+        const data = new FormData(clearCacheForm);
+        return formatKey(data.get('version'), data.get('sort'), data.get('limit'));
+      }
+      const changeHandler = e => {
+        document.getElementById('clear-cache-key').textContent = getKey();
+      };
+      changeHandler();
+      clearCacheForm.addEventListener('change', changeHandler);
+      clearCacheForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const key = getKey();
+        const button = clearCacheForm.querySelector('button');
+        button.disabled = true;
+        fetch('/admin/clear-cache.json?cache_key=' + escape(key), {credentials: 'include', method: 'POST'})
+          .then(_ => {
+            alert(`Cleared ${key}!`);
+            button.disabled = false;
+          });
+      });
+      </script>
+      {% endif %}
+      <h2>Existing content</h2>
+      <table class="table table-hover" id="content-list">
+        <thead>
+          <tr>
+            {% if by %}
+            <th width="180">Metadata (🔻recent)</th>
+            {% elif sort == 'hot' %}
+            <th width="180">Metadata (<a href="./?sort=recent{% if related_to %}&related_to={{related_to.key.id()}}{% endif %}">🔻hot</a>)</th>
+            {% elif sort == 'recent' %}
+            <th width="180">Metadata (<a href="./?sort=top{% if related_to %}&related_to={{related_to.key.id()}}{% endif %}">🔻recent</a>)</th>
+            {% elif sort == 'top' %}
+            <th width="180">Metadata (<a href="./?sort=hot{% if related_to %}&related_to={{related_to.key.id()}}{% endif %}">🔻top</a>)</th>
+            {% endif %}
+            <th>Original Link &amp; Client</th>
+            <th class="text-right" width="80">Duration</th>
+            <th class="text-center" width="272">Reaction</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in content_list %}
+          <tr data-content-id="{{item.content.key.id()}}"{% if item.content.youtube_id %} data-youtube-id="{{item.content.youtube_id}}"{% endif %} style="--reactions: {{item.content.related_count}}">
+            <td>
+              <a href="/admin/content/{{item.content.key.id()}}/?from_list={{'%2B'.join(tags)}}" data-utc="{{item.content.created|ms}}">{{item.content.created}}</a><br>
+              {% if item.creator %}
+              {{item.creator|emoji}}
+              {% if item.creator.created|recent(172800) %}<span title="Signed up {{item.creator.created|deltafromnow|pretty}} ago">🆕</span>{% endif %}
+              {% if item.creator.image_url %}
+              <img class="avatar" src="{{item.creator.image_url}}" width="20" height="20">
+              {% endif %}
+              <a{% if item.creator.verified %} class="verified"{% endif %} href="./?by={{item.creator.key.id()}}" title="See content by this user">{{item.creator.username or item.creator.key.id()}} 🎞</a>
+              <a href="/admin/accounts/{{item.creator.key.id()}}/" title="Go to account admin page">👤</a>
+              {% else %}
+              <b>MISSING CREATOR</b>
+              {% endif %}
+              <br><span class="badge badge-primary" title="Sort Index ({{item.content.sort_base|pretty}} + {{item.content.sort_bonus|pretty}} - {{item.content.sort_bonus_penalty|pretty}})">{{item.content.sort_index|pretty}}</span>
+              <div class="hotness"></div>
+            </td>
+            <td class="ellipsis">
+              {% if item.content.title %}
+                <strong>{{item.content.title}}</strong>
+                <br>
+              {% endif %}
+              <small>
+              {% if item.related_to %}
+                <strong><a href="/admin/content/{{item.related_to.key.id()}}/">{{item.related_to.title}}</a></strong>
+                <br>
+              {% elif not item.content.title %}
+                <em>No reference to original content</em><br>
+              {% endif %}
+              <a href="/admin/content/list/reaction/?sort=top&related_to={{item.content.key.id()}}">Reactions ({{item.content.related_count|pretty}})</a>
+              {% if item.content.related_count %}
+                |
+                {% if item.content.youtube_reaction_views %}
+                {{item.content.youtube_reaction_views|pretty}} <abbr title="Aggregated YouTube Views">AYTV</abbr> <a{% if item.content.youtube_reaction_views_updated|recent(86400) %} class="fresh"{% endif %} data-update-youtube-reaction-views="{{item.content.key.id()}}" href="#" title="Update{% if item.content.youtube_reaction_views_updated %}&#10;{{item.content.youtube_reaction_views_updated|deltafromnow|pretty}} ago{% endif %}">🔄</a>
+                {% else %}
+                <a data-update-youtube-reaction-views="{{item.content.key.id()}}" href="#" title="Aggregate YouTube Views">AYTV</a>
+                {% endif %}
+              {% endif %}
+              {% if item.content.original_url %}
+                | <a href="{{item.content.original_url}}" target="_blank">Original</a>
+              {% elif item.related_to and item.related_to.original_url %}
+                | <a href="{{item.related_to.original_url}}" target="_blank">Original</a>
+              {% endif %}
+              {% if item.content.slug %}
+                | <a href="https://www.reaction.cam/v/{{item.content.slug}}" target="_blank">Web</a>
+              {% endif %}
+              {% if item.content.youtube_id %}
+                | <a href="https://www.youtube.com/watch?v={{item.content.youtube_id}}" target="_blank">{% if item.content.youtube_broken %}⚠️{% endif %}YouTube{% if item.content.youtube_views %} ({{item.content.youtube_views|pretty}}){% endif %}</a>
+                <a{% if item.content.youtube_views_updated|recent(86400) %} class="fresh"{% endif %} data-update-youtube-views="{{item.content.key.id()}}" href="#" title="Update{% if item.content.youtube_views_updated %}&#10;{{item.content.youtube_views_updated|deltafromnow|pretty}} ago{% endif %}">🔄</a>
+              {% endif %}
+              {% if item.content.video_url and not item.content.thumb_url %}
+                | <a data-generate-thumb="{{item.content.key.id()}}" href="#">Generate thumbnail</a>
+              {% endif %}
+              <br><code>{{item.content.useragent}}</code>
+              </small>
+            </td>
+            <td class="text-right">
+              {{(item.content.duration or 0) / 1000}}
+              {% for t in item.content.tags %}<br><a class="badge badge-{{listed_tags.get(t, 'secondary')}}" href="/admin/content/list/{{t.replace(' ', '%20')}}/">{{t}}</a>{% endfor %}
+            </td>
+            <td class="text-center">
+              <span title="{{item.content.views_real|pretty}} human views">{{item.content.views|pretty}} 👁</span>
+              <span title="{{item.content.votes_real|pretty}} human votes">{{item.content.votes|pretty}} 👍</span>
+              <span>{{item.content.comment_count|pretty}} 💬</span>
+              <div class="bot-rating" data-id="{{item.content.key.id()}}"><span>🌑</span><span>🌑</span><span>🌑</span><span>🌑</span><span>🌑</span></div>
+              {% if item.content.video_url %}
+              <a href="#" data-video="{{item.content.video_url}}">{% if item.content.thumb_url %}<img src="{{item.content.thumb_url}}" height="100">{% else %}(show){% endif %}</a>
+              {% elif item.content.thumb_url %}
+              <img src="{{item.content.thumb_url}}" height="100">
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="form-group clearfix">
+        <p class="clearfix">
+          <a class="btn btn-primary" href="./?x=x{% if by %}&by={{by.key.id()}}{% endif %}{% if sort %}&sort={{sort}}{% endif %}{% if related_to %}&related_to={{related_to.key.id()}}{% endif %}">First page</a>
+          {% if cursor %}
+          <a class="btn btn-primary" href="?cursor={{cursor}}{% if by %}&by={{by.key.id()}}{% endif %}{% if sort %}&sort={{sort}}{% endif %}{% if related_to %}&related_to={{related_to.key.id()}}{% endif %}">Next</a>
+          {% endif %}
+        </p>
+      </div>
+    </main>
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script>
+    document.body.addEventListener('click', function (e) {
+      var t = e.target;
+      let tr = t;
+      if (t instanceof HTMLImageElement) t = t.parentNode;
+      var p = t.parentNode;
+      var url = t.dataset.video;
+      if (!url) return;
+      e.preventDefault();
+      p.removeChild(t);
+      let clickEvent = new MouseEvent('click', {'bubbles': true, 'cancelable': true});
+      Array.from(document.querySelectorAll('.close-player')).forEach(a => {
+        a.dispatchEvent(clickEvent);
+      });
+      let player;
+      if (url.match(/^https:\/\/www\.youtube\.com\//)) {
+        player = document.createElement('iframe');
+        player.style.border = 'none';
+        player.width = 256;
+        player.height = 144;
+        player.src = url + '&autoplay=1';
+        p.appendChild(player);
+      } else {
+        player = document.createElement('video');
+        player.autoplay = true;
+        player.controls = true;
+        player.width = 256;
+        player.height = 144;
+        p.appendChild(player);
+        if (url.match(/\.m3u8$/)) {
+          const hls = new Hls();
+          hls.loadSource(url);
+          hls.attachMedia(player);
+          hls.on(Hls.Events.MANIFEST_PARSED, function () {
+            player.play();
+          });
+        } else {
+          player.src = url;
+        }
+      }
+      const close = document.createElement('a');
+      close.classList.add('close-player');
+      close.href = '#';
+      close.style.display = 'block';
+      close.textContent = '(close)';
+      p.appendChild(close);
+      close.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        p.removeChild(player);
+        p.removeChild(close);
+        p.appendChild(t);
+      });
+    });
+    const botRatings = document.querySelectorAll('.bot-rating');
+    botRatings.forEach(br => {
+      const children = Array.from(br.childNodes);
+      function setRating(rating) {
+        children.forEach((s, i) => {
+          s.textContent = (i < rating ? '🌝' : '🌑');
+        });
+      }
+      fetch('https://bn.reaction.cam/v1/rating?id=' + br.dataset.id)
+        .then(r => r.json())
+        .then(r => { setRating(r.rating); });
+      br.addEventListener('click', e => {
+        const rating = children.indexOf(e.target) + 1;
+        if (rating < 1) return;
+        setRating(rating);
+        fetch('https://bn.reaction.cam/v1/rate?id=' + br.dataset.id + '&rating=' + rating, {method: 'POST'});
+      });
+    });
+    Array.from(document.querySelectorAll('[data-utc]')).forEach(node => {
+      node.textContent = new Date(parseInt(node.dataset.utc)).toLocaleString();
+    });
+    let totalHourly = Array(49).fill(0);
+    let trendingIndex = 0, trendingHourly = new Map(), trendingList = [];
+    function setTrendingContent(i) {
+      trendingIndex = i;
+      const item = trendingList[trendingIndex];
+      $('#trending-content img').attr('src', '');
+      $('#trending-content .title')
+        .attr('href', `/admin/content/${item.cid}/`)
+        .text(item.cid.toString());
+      $('#trending-content .reactions')
+        .html(`<a href="/admin/content/list/reaction/?sort=recent&related_to=${item.cid}">${item.r} reaction${item.r == 1 ? '' : 's'}</a> in the last 24 hours`);
+      $('#trending-content .tags').text('(tags: ...)');
+      fetch('/admin/decorate_content.json?content_id=' + item.cid, {credentials: 'same-origin'})
+        .then(r => r.json())
+        .then(r => {
+          if (r.id != trendingList[trendingIndex].cid) return;
+          $('#trending-content img').attr('src', r.thumb_url);
+          $('#trending-content .title').text(r.title);
+          const tags = r.tags.concat(r.removed_tags.map(tag => `<del>${tag}</del>`));
+          $('#trending-content .tags').html(`(tags: ${tags.join(', ')})`);
+        });
+    }
+    $('#trending-content .prev').click(e => {
+      e.preventDefault();
+      setTrendingContent((trendingList.length + trendingIndex - 1) % trendingList.length);
+    });
+    $('#trending-content .next').click(e => {
+      e.preventDefault();
+      setTrendingContent((trendingIndex + 1) % trendingList.length);
+    });
+    const timeOpts = {hour: 'numeric', minute: 'numeric', timeZone: 'America/New_York'};
+    function setGraph(e, hours) {
+      let html = '';
+      hours.forEach((count, i) => {
+        const start = Math.floor(((+new Date()) - (48 - i) * 3600000) / 3600000) * 3600000;
+        const startTime = new Date(start).toLocaleString('en-US', timeOpts);
+        const end = start + 3540000;
+        const endTime = new Date(end).toLocaleString('en-US', Object.assign({timeZoneName: 'short'}, timeOpts));
+        const title = `${startTime} — ${endTime}\n${count.toLocaleString()} reaction${count != 1 ? 's' : ''}`;
+        html += `<div class="column" style="--reactions-hour: ${count}" title="${title}"><div class="bar"></div></div>\n`;
+      });
+      e.innerHTML = html;
+    }
+    if (document.getElementById('trending-content')) {
+      fetch('/admin/trending_content.json', {credentials: 'same-origin'})
+        .then(r => r.json())
+        .then(r => {
+          totalHourly = Array(49).fill(0);
+          trendingHourly = new Map();
+          trendingList = [];
+          for (const [contentId, count, hourly] of r.data) {
+            hourly.forEach((c, i) => totalHourly[i] += c);
+            trendingHourly.set(contentId, hourly);
+            trendingList.push({cid: contentId, r: count});
+          }
+          trendingList.sort((a, b) => b.r - a.r);
+          // Update individual content graphs.
+          let max = 0;
+          Array.from(document.querySelectorAll('td .hotness')).forEach(e => {
+            let tr = e;
+            while (tr && tr.nodeName != 'TR') tr = tr.parentNode;
+            if (!tr) return;
+            const contentId = parseInt(tr.dataset.contentId);
+            if (!contentId) return;
+            const hours = trendingHourly.get(contentId);
+            if (!hours) return;
+            setGraph(e, hours);
+            max = Math.max(max, ...hours);
+          });
+          document.body.style.setProperty('--reactions-max', max);
+          // Update total trending content graph.
+          const totalGraph = document.getElementById('total-reactions');
+          setGraph(totalGraph, totalHourly);
+          totalGraph.style.setProperty('--reactions-max', Math.max(...totalHourly));
+          // Update trending content explorer.
+          setTrendingContent(0);
+        });
+    }
+    function addJobSchedulerHandler(element, datasetKey, jobId, configureForm) {
+      const text = element.textContent;
+      const title = element.title;
+      let pending = false;
+      element.addEventListener('click', async function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (pending) return;
+        this.removeAttribute('href');
+        this.textContent = text.length < 3 ? '⏱' : text + ' ⏱';
+        this.title = title;
+        pending = true;
+        try {
+          const body = new FormData();
+          await configureForm(body, this.dataset[datasetKey]);
+          const r = await fetch(`/_ah/jobs/${jobId}`, {method: 'POST', body, credentials: 'include'});
+          if (!r.ok) throw Error('Bad status: ' + r.statusText);
+          this.textContent = text.length < 3 ? '✅' : text + ' ✅';
+        } catch (e) {
+          console.error(e);
+          this.textContent = text.length < 3 ? '⚠️' : text + ' ⚠️';
+          this.title = `${e}`;
+        }
+        this.href = '#';
+        pending = false;
+      });
+    }
+    function setUpJobScheduler(dataAttribute, jobId, parameter, configureForm) {
+      const datasetKey = dataAttribute.replace(/-\w/g, t => t.substr(1).toUpperCase());
+      for (const element of document.querySelectorAll('[data-' + dataAttribute + ']')) {
+        addJobSchedulerHandler(element, datasetKey, jobId, parameter, configureForm);
+      }
+    }
+    setUpJobScheduler('generate-thumb', 'generate_thumbnail', (f, v) => f.set('content_id', v));
+    setUpJobScheduler('update-youtube-views', 'update_youtube_views', (f, v) => f.set('content_id', v));
+    setUpJobScheduler('update-youtube-reaction-views', 'update_youtube_views_batched', (f, v) => f.set('original_id', v));
+    </script>
+  </body>
+</html>

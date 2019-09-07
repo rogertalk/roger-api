@@ -1,0 +1,17 @@
+{
+  "call.challenge_code":"<prompt xml:lang=\"pt-br-female\">Seu código de verificação do Roger é <break time=\".5s\"\/><prosody rate=\"-20\">%(code)s<\/prosody><break time=\"2s\"\/>Seu código de verificação do Roger é <break time=\".5s\"\/><prosody rate=\"-20\">%(code)s<\/prosody>",
+  "email.challenge_code.subject":"%(code)s é o seu código de verificação do Roger.",
+  "email.challenge_code.body":"Pode verificar seu Roger app usando o código: %(code)s",
+  "email.download_link.subject":"Baixar o Roger app",
+  "email.download_link.body":"Aqui está o seu link para instalar o Roger app: %(link)s",
+  "email.pli_invite.subject":"Seu convite para o Roger Talk está aqui",
+  "email.pli_invite.body":"Oi!\n\nO Roger, uma nova maneira de falar com as pessoas em sua vida, está lançando oficialmente hoje! Baixe o novo aplicativo e começe a falar de graça. Divirta-se!\n\n%(link)s\n\n- a equipe do Roger",
+  "email.stream_token.subject":"%(name)s acabou de te mandar uma mensagem de voz usando o Roger app.",
+  "email.stream_token.body":"Escute e responda em %(link)s",
+  "sms.challenge_code":"%(code)s é o seu código de verificação do Roger.",
+  "sms.download_link":"Aqui está o seu link para baixar o Roger:\n%(link)s",
+  "sms.invite":"Ótima notícia! 👋 %(name)s recomendou você e %(others)s outros para um grupo no Roger app: %(link)s toque para juntar-se à conversa 🎉",
+  "sms.invite_personal":"Oi %(to)s! 👋 %(from)s recomendou você e %(others)s outros para um grupo no Roger app: %(link)s toque para juntar-se à conversa 🎉",
+  "sms.pli_invite":"Oi!\n\nO Roger, uma nova maneira de falar com as pessoas em sua vida, está lançando oficialmente hoje! Baixe o novo aplicativo e começe a falar de graça. Divirta-se!\n\n%(link)s\n\n- a equipe do Roger",
+  "sms.stream_token":"%(name)s acabou de te mandar uma mensagem de voz usando o Roger app. Escute e responda em %(link)s"
+}

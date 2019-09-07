@@ -1,0 +1,79 @@
+service: default
+runtime: python27
+api_version: 1
+threadsafe: false
+
+handlers:
+- url: /admin/static
+  static_dir: roger/apps/admin_static
+  login: admin
+  secure: always
+- url: /_ah/cron/.*
+  script: roger.apps.cron.app
+  login: admin
+  secure: always
+- url: /_ah/jobs/.+
+  script: roger.apps.jobs.app_toplevel
+  login: admin
+  secure: always
+- url: /_ah/mail/.+
+  script: roger.apps.email.app
+  login: admin
+  secure: always
+- url: /_ah/queue/callbacks
+  script: roger.apps.callbacks.app
+  login: admin
+  secure: always
+- url: /_ah/queue/reporting
+  script: roger.apps.reporting.app
+  login: admin
+  secure: always
+- url: /admin/.*
+  script: roger.apps.admin.app
+  login: admin
+  secure: always
+- url: /(file|image)/.*
+  script: roger.apps.files.app
+  secure: always
+- url: /internal/.*
+  script: roger.apps.internal.app
+  secure: always
+- url: /oauth2/token
+  script: roger.apps.oauth2.app
+  secure: always
+- url: /slack/.*
+  script: roger.apps.slack.app
+  secure: always
+- url: /.*
+  script: roger.apps.api.app_toplevel
+  secure: always
+
+libraries:
+- name: jinja2
+  version: latest
+- name: pycrypto
+  version: latest
+- name: pytz
+  version: latest
+- name: ssl
+  version: latest
+
+builtins:
+- deferred: on
+
+inbound_services:
+- mail
+
+skip_files:
+- ^(.*/)?\..*$
+- ^.*\.py[co]$
+- ^htmlcov/.*$
+- ^lib/_markerlib/.*$
+- ^lib/coverage.*$
+- ^lib/pkg_resources/.*$
+- ^lib/setuptools.*$
+- ^lib/mock\.py$
+- ^lib/.*?\.egg-info/.*$
+- ^roger-python-common/.*$
+- ^scripts/.*$
+- ^test/.*$

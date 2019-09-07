@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Content Search Index</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="//code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha256-3edrmyuQ0w65f8gfBsqowzjJe2iM6n0nKciPUp8y+7E=" crossorigin="anonymous"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.bundle.min.js" integrity="sha384-feJI7QwhOS+hwpX2zkaeJQjeiwlhOP+SdQDqhgvvo1DsjtiSQByFdThsxO669S2D" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <main class="container">
+      <nav aria-label="breadcrumb" class="mt-5">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/admin/">Admin</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Content Search Index</li>
+        </ol>
+      </nav>
+      <h1 class="display-4">Content Search Index</h1>
+      <p class="lead">Query the content search index and evict any bad results as necessary.</p>
+      <form>
+        <div class="form-group">
+          <label for="query">Search query</label>
+          <input class="form-control" id="query" type="search" placeholder="Leave empty to see source picker suggestions">
+        </div>
+        <div class="form-group">
+          <button class="btn btn-light" id="clear-cache">Clear <code id="clear-cache-key"></code></button>
+        </div>
+      </form>
+      <h2 class="mt-5">Results</h2>
+      <table class="table" id="results">
+        <tfoot><tr><td colspan="3">Loading…</td></tr></tfoot>
+        <tbody></tbody>
+      </table>
+    </main>
+    <style>
+    #results.loading td {
+      opacity: .5;
+    }
+    </style>
+    <script>
+    (function () {
+      const clearCache = document.getElementById('clear-cache');
+      const clearCacheKey = document.getElementById('clear-cache-key');
+      const query = document.getElementById('query');
+      const results = document.querySelector('#results tbody');
+      const resultsStatus = document.querySelector('#results tfoot td');
+      const resultsTable = document.querySelector('#results');
+      let currentQuery, timeout;
+      function search(q, {force = false} = {}) {
+        q = q.replace(/^\s+|\s+$/g, '').replace(/\s+/g, ' ');
+        if (q === currentQuery && !force) return;
+        currentQuery = q;
+        if (q) {
+          resultsStatus.innerHTML = `Searching for <strong>${escapeHTML(q)}</strong>…`;
+        } else {
+          resultsStatus.innerHTML = 'Loading…';
+        }
+        const encodedQ = btoa(unescape(encodeURIComponent(q.toLowerCase().substr(0, 40))));
+        clearCacheKey.textContent = 'search_51_' + encodedQ;
+        resultsTable.classList.add('loading');
+        fetch(`/v53/content/search?query=${escape(q)}`).then(r => r.json()).then(r => {
+          if (q !== currentQuery) return;
+          resultsTable.classList.remove('loading');
+          if (q) {
+            resultsStatus.innerHTML = `About <strong>${r.total_count.toLocaleString()}</strong> results for <strong>${escapeHTML(q)}</strong>.`;
+          } else {
+            resultsStatus.innerHTML = `There are <strong>${r.total_count.toLocaleString()}</strong> suggestions.`;
+          }
+          let html = '';
+          for (let c of r.data) {
+            html += `<tr><td class="text-center" width="120"><img height="60" src="${c.thumb_url}"></td><td><a href="/admin/content/${c.id}/" title="${escapeHTML(c.title || 'Untitled')}">`;
+            if (c.title) {
+              let displayTitle = c.title;
+              if (displayTitle.length >= 80) displayTitle = displayTitle.substr(0, 75).trim() + '…';
+              html += `${escapeHTML(displayTitle)}`;
+            } else {
+              html += '<em>Untitled</em>';
+            }
+            html += '</a>';
+            const details = [`<span class="badge badge-primary" title="The search rank of this result">${c.rank.toLocaleString()}</span>`];
+            if (c.creator) {
+              details.push(`by <a href="/admin/accounts/${c.creator.id}/">@${escapeHTML(c.creator.username)}</a>`);
+            }
+            if (c.original_url) {
+              let displayURL = c.original_url;
+              if (displayURL.length >= 60) displayURL = displayURL.substr(0, 55).trim() + '…';
+              details.push(`<a class="text-secondary" href="${escapeHTML(c.original_url)}" target="_blank">${escapeHTML(displayURL)}</a>`);
+            }
+            html += `<br><small class="text-muted">${details.join(' • ')}</small>`;
+            html += `</td><td class="text-right">${c.related_count.toLocaleString()}<br><button data-evict="${c.id}" type="button" class="btn btn-sm btn-outline-danger">Evict</button></td></tr>\n`;
+          }
+          results.innerHTML = html;
+        });
+      }
+      const searchInput = () => search(query.value);
+      function scheduleSearch() {
+        clearTimeout(timeout);
+        timeout = setTimeout(searchInput, 100);
+      }
+      query.addEventListener('change', scheduleSearch);
+      query.addEventListener('keypress', scheduleSearch);
+      query.addEventListener('keyup', scheduleSearch);
+      function escapeHTML(text) {
+        return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;');
+      }
+      resultsTable.addEventListener('click', e => {
+        const evictId = e.target.dataset.evict;
+        if (!evictId) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.target.disabled = true;
+        fetch(`/admin/search-evict.json?id=${evictId}&query=${escape(currentQuery)}`, {credentials: 'include', method: 'POST'}).then(r => r.json()).then(r => {
+          if (!e.target.parentNode) return;
+          e.target.parentNode.removeChild(e.target);
+        });
+      });
+      // Search empty query by default.
+      search('');
+      // Support clearing a search cache.
+      clearCache.addEventListener('click', e => {
+        e.preventDefault();
+        clearCache.disabled = true;
+        const key = clearCacheKey.textContent;
+        fetch('/admin/clear-cache.json?cache_key=' + escape(key), {credentials: 'include', method: 'POST'})
+          .then(_ => {
+            alert(`Cleared ${key}!`);
+            clearCache.disabled = false;
+            search(currentQuery, {force: true});
+          });
+      });
+    })();
+    </script>
+  </body>
+</html>

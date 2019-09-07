@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Dashboard</title>
+		<link href="https://fonts.googleapis.com/css?family=Roboto:100,300" rel="stylesheet">
+		<style>
+		body {
+			background: #111;
+			color: #fff;
+			display: flex;
+			flex-direction: row;
+			font-family: Roboto, sans-serif;
+			font-size: 2vw;
+			font-weight: 100;
+			margin: 0;
+			min-height: 100%;
+		}
+		html {
+			height: 100%;
+		}
+		section {
+			display: flex;
+			flex-direction: column;
+			flex-grow: 1;
+			justify-content: center;
+		}
+		section:nth-child(even) {
+			background: #191919;
+		}
+		section p {
+			justify-content: center;
+			display: flex;
+			margin: .3em 0;
+			width: 100%;
+		}
+		section p img {
+			max-height: 16vmin;
+			max-width: 16vmin;
+			padding: 2vmin;
+		}
+		section p > span, section p > strong {
+			flex-basis: 50%;
+			flex-grow: 1;
+			padding: 0 .5vw;
+		}
+		section p > span {
+			text-transform: uppercase;
+		}
+		section p > strong {
+			text-align: right;
+		}
+		section p span.diff {
+			color: #aaa;
+			font-size: 40%;
+			font-weight: 100;
+			left: -.3vw;
+			position: relative;
+			top: 0;
+			transition: color 1s, font-size 1s, top 1s;
+			vertical-align: middle;
+		}
+		section p span.diff:after {
+			animation: 2s pulsing linear infinite alternate;
+			content: " —";
+		}
+		section p span.major {
+			font-size: 75%;
+			font-weight: 300;
+		}
+		section p span.neg {
+			color: #f00;
+			font-size: 50%;
+			top: .4vw;
+		}
+		section p span.neg:after {
+			content: " ▼";
+		}
+		section p span.pos {
+			color: #0f0;
+			font-size: 50%;
+			top: -.6vw;
+		}
+		section p span.pos:after {
+			content: " ▲";
+		}
+		strong {
+			font-weight: 300;
+		}
+		@keyframes pulsing {
+			from {
+				opacity: .5;
+			}
+			top {
+				opacity: .9;
+			}
+		}
+		</style>
+	</head>
+	<body>
+		<section>
+			<p>
+				<img src="//i.imgur.com/2D9Z75z.png">
+			</p>
+			<p>
+				<strong id="ios-regs"><span class="diff"></span><span class="value"></span></strong> <span>regs</span>
+			</p>
+			<p>
+				<strong id="ios-a0"><span class="diff"></span><span class="value"></span></strong> <span>A0</span>
+			</p>
+			<p>
+				<strong id="ios-a0-over-regs"><span class="diff"></span><span class="value"></span></strong> <span>A0/regs</span>
+			</p>
+			<p>
+				<strong id="ios-dau"><span class="diff"></span><span class="value"></span></strong> <span>DAU</span>
+			</p>
+			<p>
+				<strong id="ios-invites-per-dau"><span class="diff"></span><span class="value"></span></strong> <span>invites/DAU</span>
+			</p>
+		</section>
+		<section>
+			<p>
+				<img src="//i.imgur.com/cmBVn6w.png">
+			</p>
+			<p>
+				<strong id="android-regs"><span class="diff"></span><span class="value"></span></strong> <span>regs</span>
+			</p>
+			<p>
+				<strong id="android-a0"><span class="diff"></span><span class="value"></span></strong> <span>A0</span>
+			</p>
+			<p>
+				<strong id="android-a0-over-regs"><span class="diff"></span><span class="value"></span></strong> <span>A0/regs</span>
+			</p>
+			<p>
+				<strong id="android-dau"><span class="diff"></span><span class="value"></span></strong> <span>DAU</span>
+			</p>
+			<p>
+				<strong id="android-invites-per-dau"><span class="diff"></span><span class="value"></span></strong> <span>invites/DAU</span>
+			</p>
+		</section>
+		<section>
+			<p>
+				<img src="//i.imgur.com/gFesUG3.png">
+			</p>
+			<p>
+				<strong id="other-regs"><span class="diff"></span><span class="value"></span></strong> <span>regs</span>
+			</p>
+			<p>
+				<strong id="other-a0"><span class="diff"></span><span class="value"></span></strong> <span>A0</span>
+			</p>
+			<p>
+				<strong id="other-a0-over-regs"><span class="diff"></span><span class="value"></span></strong> <span>A0/regs</span>
+			</p>
+			<p>
+				<strong id="other-dau"><span class="diff"></span><span class="value"></span></strong> <span>DAU</span>
+			</p>
+			<p>
+				<strong id="other-invites-per-dau"><span class="diff"></span><span class="value"></span></strong> <span>invites/DAU</span>
+			</p>
+		</section>
+		<script>
+		let data;
+		function loadData() {
+			fetch('users.json', {credentials: 'include'})
+				.then(r => r.json())
+				.then(r => {
+					data = r;
+					setTimeout(loadData, 120000);
+				})
+				.catch(e => {
+					console.error('Failed to fetch data:', e);
+					setTimeout(loadData, 20000);
+				});
+		}
+		loadData();
+
+		const displayData = {};
+
+		function number(value) {
+			if (!value) value = 0;
+			return value.toLocaleString('en-US', Math.abs(value) >= 10 ? {maximumFractionDigits: 0} : {minimumSignificantDigits: 2, maximumSignificantDigits: 2});
+		}
+
+		function set(containerId, from, to, {suffix = '', absoluteDiff = false} = {}) {
+			const container = document.getElementById(containerId);
+			container.querySelector('.value').textContent = number(to) + suffix;
+			const diffElem = container.querySelector('.diff');
+			const diff = to - from, fraction = diff / from;
+			diffElem.classList.toggle('neg', fraction < -0.1);
+			diffElem.classList.toggle('pos', fraction > 0.1);
+			diffElem.classList.toggle('major', Math.abs(fraction) > 1);
+			diffElem.textContent = (diff > 0 ? '+' : '') + (absoluteDiff ? number(diff) : number(fraction * 100) + '%');
+		}
+
+		const platforms = ['ios', 'android', 'other'];
+		function frame() {
+			requestAnimationFrame(frame);
+			if (!data) return;
+			for (let key in data) {
+				if (displayData[key]) {
+					displayData[key] += (data[key] - displayData[key]) * 0.003;
+				} else {
+					displayData[key] = data[key];
+				}
+			}
+			for (let platform of platforms) {
+				set(platform + '-regs',
+					displayData[platform + '_registered_week_ago'],
+					displayData[platform + '_registered']);
+				set(platform + '-a0',
+					displayData[platform + '_a0_week_ago'],
+					displayData[platform + '_a0']);
+				set(platform + '-a0-over-regs',
+					displayData[platform + '_a0_week_ago'] / displayData[platform + '_registered_week_ago'] * 100,
+					displayData[platform + '_a0'] / displayData[platform + '_registered'] * 100,
+					{suffix: '%', absoluteDiff: true});
+				set(platform + '-dau',
+					displayData[platform + '_dau_week_ago'],
+					displayData[platform + '_dau']);
+				set(platform + '-invites-per-dau',
+					displayData[platform + '_invites_week_ago'] / displayData[platform + '_dau_week_ago'],
+					displayData[platform + '_invites'] / displayData[platform + '_dau']);
+			}
+		}
+		frame();
+		</script>
+	</body>
+</html>

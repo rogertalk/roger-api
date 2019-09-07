@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>{% if team %}{{team.name}}{% else %}Uh-oh!{% endif %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
+  </head>
+  <body>
+    <div class="container">
+      <h1>{% if service %}<a href="..">{{service.title}}</a> » {% endif %}{% if team %}{{team.name}}{% else %}Uh-oh!{% endif %}</h1>
+      {% if error %}
+      <div class="panel panel-danger">
+        <div class="panel-heading">
+          <h3 class="panel-title">Error</h3>
+        </div>
+        <div class="panel-body">{{error}}</div>
+      </div>
+      {% endif %}
+      {% if team %}
+      <h3>Information</h3>
+      <form class="form-horizontal" method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+          <label class="col-sm-2 control-label">Team Id</label>
+          <div class="col-sm-10">
+            <p class="form-control-static">{{team.key.id()}}</p>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="col-sm-2 control-label">Image</label>
+          <div class="col-sm-10">
+            <div style="{% if team.image_url %}background-image: url({{team.image_url}}); {% endif %}background-position: 50% 50%; background-size: cover; background-color: #fafafa; border-radius: 12px; box-shadow: #fafafa 0 0 0 5px; height: 100px; width: 100px;"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="col-sm-2 control-label"></label>
+          <div class="col-sm-10">
+            <input type="file" name="image" accept="image/*">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="col-sm-2 control-label">Team Name</label>
+          <div class="col-sm-10">
+            <input name="name" placeholder="{{team.key.id()}}" type="text" class="form-control" value="{{team.stored_name or ''}}">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="col-sm-2 control-label">Slug (subdomain)</label>
+          <div class="col-sm-10">
+            <input name="slug" placeholder="No slug set" type="text" class="form-control" value="{{team.slug or ''}}">
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="col-sm-offset-2 col-sm-10">
+            <div class="checkbox">
+              <label><input{% if team.whitelisted %} checked{% endif %} name="whitelisted" type="checkbox" value="true"> Whitelist this team (fika.io, email only)</label>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="col-sm-offset-2 col-sm-10">
+            <button class="btn btn-success" type="submit">Update</button>
+          </div>
+        </div>
+      </form>
+      {% if service.key.id() == "email" %}
+      <h3>Create accounts / send invites</h3>
+      {% if team.whitelisted %}
+      <form class="form-horizontal" id="create-form">
+        <div class="form-group">
+          <label class="col-sm-2 control-label">User to create/find</label>
+          <div class="col-sm-3">
+            <input class="form-control" id="create-email" placeholder="jane.doe@{{team.key.id()}}">
+          </div>
+          <div class="col-sm-1">
+            <p class="form-control-static" id="create-status">...</p>
+          </div>
+          <div class="col-sm-3">
+            <input class="form-control" disabled id="create-name" placeholder="Jane Doe">
+          </div>
+          <div class="col-sm-3">
+            <div class="input-group">
+              <span class="input-group-addon" id="create-image" style="background: #fafafa; background-position: 50% 50%; background-size: cover; width: 34px;">&nbsp;</span>
+              <input class="form-control" disabled id="create-image-file" type="file" accept="image/*">
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="col-sm-offset-2 col-sm-10">
+            <div class="checkbox">
+              <label><input checked id="create-send-invite" type="checkbox" value="true"> Send an invite email to this user</label>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="col-sm-offset-2 col-sm-10">
+            <button class="btn btn-success" disabled id="create-button" type="submit">Create/Invite</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="col-sm-offset-2 col-sm-10">
+            <p class="form-control-static" id="create-list"></p>
+          </div>
+        </div>
+      </form>
+      <script>
+      const createForm = document.getElementById('create-form'),
+            createEmail = document.getElementById('create-email'),
+            createStatus = document.getElementById('create-status'),
+            createName = document.getElementById('create-name'),
+            createImage = document.getElementById('create-image'),
+            createImageFile = document.getElementById('create-image-file'),
+            createSendInvite = document.getElementById('create-send-invite'),
+            createButton = document.getElementById('create-button'),
+            createList = document.getElementById('create-list');
+      const domain = '{{team.key.id()}}';
+      let createAccountData = null;
+      createEmail.addEventListener('keyup', (e) => {
+        const identifier = createEmail.value.trim().toLowerCase();
+        if (identifier.substr(-domain.length - 1) != '@' + domain) {
+          createEmail.parentNode.classList.add('has-error');
+          createStatus.textContent = '...';
+          createName.disabled = true;
+          createName.value = '';
+          createImage.style.backgroundImage = '';
+          createImageFile.disabled = true;
+          return;
+        }
+        createEmail.parentNode.classList.add('has-error');
+        fetch('/v30/profile/' + escape(identifier))
+          .then(r => r.json())
+          .then(data => {
+            createEmail.parentNode.classList.remove('has-error');
+            createName.disabled = false;
+            createImageFile.disabled = false;
+            createButton.disabled = false;
+            if (!data.id) {
+              createAccountData = null;
+              createName.value = '';
+              createImage.style.backgroundImage = '';
+              createStatus.innerHTML = '<em>new</em>';
+              return;
+            }
+            createAccountData = data;
+            createStatus.innerHTML = `<a href="/admin/accounts/${data.id}/" target="_blank">${data.status}</a>`;
+            createName.value = data.display_name;
+            createImage.style.backgroundImage = 'url(' + data.image_url + ')';
+          });
+      });
+      createImageFile.addEventListener('change', (e) => {
+        const file = createImageFile.files[0];
+        if (!file) {
+          if (createAccountData) {
+            createImage.style.backgroundImage = 'url(' + createAccountData.image_url + ')';
+          } else {
+            createImage.style.backgroundImage = '';
+          }
+          return;
+        }
+        const url = URL.createObjectURL(createImageFile.files[0]);
+        createImage.style.backgroundImage = 'url(' + url + ')';
+      });
+      createForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        createEmail.disabled = true;
+        createButton.disabled = true;
+        const form = new FormData();
+        form.set('identifier', createEmail.value);
+        form.set('display_name', createName.value);
+        if (createSendInvite.checked) form.set('send_invite', 'true');
+        const file = createImageFile.files[0];
+        if (file) {
+          form.set('image', file);
+        }
+        fetch(`${location.pathname}create.json`, {credentials: 'include', body: form, method: 'POST'})
+          .then(r => r.json())
+          .then(data => {
+            createEmail.disabled = false;
+            createEmail.focus();
+            createList.innerHTML += `<img src="${data.image_url}" style="border-radius: 9999px;" width="20" height="20"> <a href="/admin/accounts/${data.id}/" target="_blank">${data.display_name}</a><br>`;
+          });
+        createEmail.value = '';
+        createAccountData = null;
+        createName.value = '';
+        createImage.style.backgroundImage = '';
+        createImageFile.value = null;
+        createStatus.innerHTML = '<em>new</em>';
+      });
+      </script>
+      {% else %}
+      <p>Whitelist this team before inviting people to it.</p>
+      {% endif %}
+      {% endif %}
+      <h3>Members</h3>
+      <table class="table table-bordered table-hover">
+        <thead><tr><th>Identifier</th><th>Name</th><th>Status</th><th>Clients</th><th>Last refresh</th></tr></thead>
+        <tbody id="member-rows"><tr><td colspan="5">Please wait...</td></tr></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="5">
+              <nav>
+                <ul class="pager" style="margin: 0;">
+                  <li class="previous disabled"><a href="#">&larr; Previous</a></li>
+                  <li class="next disabled"><a href="#">Next &rarr;</a></li>
+                </ul>
+              </nav>
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+      <script>
+        (() => {
+          const memberRows = document.getElementById('member-rows');
+          const nextLink = memberRows.parentNode.querySelector('.next a');
+          const previousLink = memberRows.parentNode.querySelector('.previous a');
+          function membersPath(cursor) {
+            return `${location.pathname}members.json?cursor=${cursor}`;
+          }
+          let nextPath = membersPath('');
+          let currentPath, previousPath;
+          function nextPage() {
+            previousPath = currentPath;
+            currentPath = nextPath;
+            fetch(currentPath, {credentials: 'same-origin'})
+              .then((response) => response.json())
+              .then((result) => {
+                const rows = result.data.map((m) => {
+                  const clients = m.clients.map(client => `<code>${client}</code>`).join(', ');
+                  return `<tr><td><code>${m.service_identifier}</code></td><td><a href="/admin/accounts/${m.id}/"><img src="${m.image_url}" style="border-radius: 9999px;" width="20" height="20"> ${m.display_name}</a></td><td>${m.status}</td><td>${clients}</td><td>${new Date(m.last_refresh)}</td></tr>`;
+                });
+                nextPath = result.cursor ? membersPath(result.cursor) : null;
+                nextLink.parentNode.classList.toggle('disabled', !nextPath);
+                previousLink.parentNode.classList.toggle('disabled', !previousPath);
+                memberRows.innerHTML = rows.join('\n');
+              });
+          }
+          nextPage();
+          nextLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            if (!nextPath) return;
+            nextPage();
+          });
+          previousLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            if (!previousPath) return;
+            nextPath = previousPath; // lol.
+            nextPage();
+            previousPath = null;
+          });
+        })()
+      </script>
+      <h3>Pending invites</h3>
+      <table class="table table-bordered table-hover">
+        <thead><tr><th>Name</th><th>Status</th></tr></thead>
+        <tbody id="pending-rows"><tr><td colspan="2">Please wait...</td></tr></tbody>
+      </table>
+      <script>
+        (() => {
+          const pendingRows = document.getElementById('pending-rows');
+          fetch(`${location.pathname}pending.json`, {credentials: 'same-origin'})
+            .then((response) => response.json())
+            .then((result) => {
+              const rows = result.data.map((a) => {
+                return `<tr><td><img src="${a.image_url}" style="border-radius: 9999px;" width="20" height="20"> <a href="/admin/accounts/${a.id}/">${a.display_name}</a></td><td>${a.status}</td></tr>`;
+              });
+              pendingRows.innerHTML = rows.join('\n');
+            });
+        })()
+      </script>
+      {% endif %}
+    </div>
+  </body>
+</html>

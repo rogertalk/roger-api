@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Dashboard</title>
+		<link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400" rel="stylesheet">
+		<style>
+		body {
+			background: #111;
+			color: #fff;
+			display: flex;
+			align-items: center;
+			flex-direction: column;
+			font-family: Roboto, sans-serif;
+			font-size: 5vmin;
+			font-weight: 100;
+			justify-content: center;
+			margin: 0;
+			min-height: 100%;
+		}
+		html {
+			height: 100%;
+		}
+		p {
+			margin: 1em 0 0;
+		}
+		strong {
+			font-weight: 300;
+		}
+		.pie {
+			height: 25vmin;
+			width: 25vmin;
+		}
+		.pie path:nth-child(1) {
+			fill: #ff3a3a;
+		}
+		.pie path:nth-child(2) {
+			fill: #0ff;
+		}
+		.pie path:nth-child(3) {
+			fill: #fff;
+		}
+		.row {
+			display: flex;
+			width: 100%;
+		}
+		.row > * {
+			flex-basis: 50%;
+			flex-grow: 1;
+			padding: 0 1vmin;
+		}
+		.row span {
+			text-transform: uppercase;
+		}
+		.row strong {
+			text-align: right;
+		}
+		#chunks {
+			align-items: center;
+			display: flex;
+			flex-direction: column;
+			font-size: 2vmin;
+			margin-bottom: 2vmin;
+		}
+		#chunks span {
+			margin: 1vmin 0 0 0;
+		}
+		</style>
+	</head>
+	<body>
+		<div id="chunks">
+			<svg class="pie" viewBox="0 0 32 32">
+				<path></path><path></path><path></path>
+			</svg>
+			<span>(groups vs Alexa vs others)</span>
+		</div>
+		<div class="row">
+			<strong id="hours">–</strong>
+			<span>hours</span>
+		</div>
+		<div class="row">
+			<strong id="conversations">–</strong>
+			<span>conversations</span>
+		</div>
+		<div class="row">
+			<strong id="people">–</strong>
+			<span>people</span>
+		</div>
+		<div class="row">
+			<strong id="reach">–</strong>
+			<span>reach</span>
+		</div>
+		<p>
+			<img width="480" height="268" src="https://media.giphy.com/media/ZVik7pBtu9dNS/giphy.gif">
+		</p>
+		<script>
+		let data;
+		function loadData() {
+			fetch('convos.json', {credentials: 'include'})
+				.then(r => r.json())
+				.then(r => {
+					data = r;
+					setTimeout(loadData, 10000);
+				});
+		}
+		loadData();
+
+		function drawPie(svg, values) {
+			const paths = svg.querySelectorAll('path');
+			if (paths.length != values.length) throw new Error('Mismatching number of paths/values');
+			const total = values.reduce((a, b) => a + b);
+			let i = 0, acc = 0, x = 16, y = 0;
+			for (let value of values) {
+				acc += value;
+				const a = (acc / total - 0.25) * Math.PI * 2;
+				const tx = 16 + 16 * Math.cos(a), ty = 16 + 16 * Math.sin(a);
+				const flag = value / total >= 0.5 ? 1 : 0;
+				paths[i++].setAttribute('d', `M ${x} ${y} A 16 16 0 ${flag} 1 ${tx} ${ty} L 16 16`);
+				[x, y] = [tx, ty];
+			}
+		}
+
+		const displayData = {};
+
+		const elements = {
+			chunks: document.querySelector('#chunks svg'),
+			hours: document.getElementById('hours'),
+			conversations: document.getElementById('conversations'),
+			people: document.getElementById('people'),
+			reach: document.getElementById('reach'),
+		};
+
+		function frame() {
+			requestAnimationFrame(frame);
+			if (!data) return;
+			for (let key in data) {
+				if (displayData[key]) {
+					displayData[key] += (data[key] - displayData[key]) * 0.003;
+				} else {
+					displayData[key] = data[key];
+				}
+			}
+			drawPie(elements.chunks, [displayData.group_chunks, displayData.alexa_chunks, displayData.other_chunks]);
+			const hours = displayData.total_seconds / 3600;
+			elements.hours.textContent = hours.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+			elements.conversations.textContent = displayData.unique_conversations.toLocaleString('en-US', {maximumFractionDigits: 0});
+			elements.people.textContent = displayData.unique_people.toLocaleString('en-US', {maximumFractionDigits: 0});
+			const reach = Math.round(displayData.unique_people / displayData.potential_reach * 100);
+			elements.reach.textContent = reach + '%';
+		}
+		frame();
+		</script>
+	</body>
+</html>

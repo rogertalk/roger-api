@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Top YouTube Sources</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="//code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha256-3edrmyuQ0w65f8gfBsqowzjJe2iM6n0nKciPUp8y+7E=" crossorigin="anonymous"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.bundle.min.js" integrity="sha384-feJI7QwhOS+hwpX2zkaeJQjeiwlhOP+SdQDqhgvvo1DsjtiSQByFdThsxO669S2D" crossorigin="anonymous"></script>
+    <style>
+    .avatar {
+      background-color: #fafafa;
+      background-position: 50% 50%;
+      background-size: cover;
+      border-radius: 9999px;
+      object-fit: cover;
+      position: relative;
+      transition: transform 200ms;
+      z-index: 1;
+    }
+    .avatar:hover {
+      transform: scale(6);
+      z-index: 2;
+    }
+    .fresh {
+      filter: grayscale(100%);
+      opacity: .4;
+    }
+    .age.hour {
+      font-weight: bold;
+    }
+    .age.hour, .age.day {
+      color: #0c0;
+    }
+    .age.fortnight, .age.year, .age.old {
+      color: #6c757d;
+    }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <nav aria-label="breadcrumb" class="mt-5">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/admin/">Admin</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Top YouTube Sources</li>
+        </ol>
+      </nav>
+      <h1 class="display-4">Top YouTube Sources</h1>
+      <p class="lead">The top sources for YouTube views. The page is divided into three sections: <a href="#accounts">accounts</a>, <a href="#originals">originals</a>, and <a href="#reactions">reactions</a>.</p>
+      <h2 id="accounts">Accounts</h2>
+      <ul class="nav nav-tabs mb-3" id="accounts-tab">
+        <li class="nav-item">
+          <a class="nav-link active" data-toggle="tab" href="#accounts-aytv" id="accounts-aytv-tab">Aggregated YouTube Views</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" data-toggle="tab" href="#accounts-subs" id="accounts-subs-tab">Subscribers</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" data-toggle="tab" href="#accounts-channel-views" id="accounts-channel-views-tab">Channel Views</a>
+        </li>
+      </ul>
+      {% macro accounts_table(accounts) %}
+      <table class="col table table-hover">
+        <thead>
+          <tr>
+            <th class="text-right" scope="col" width="60">#</th>
+            <th scope="col" width="310">Account (<a data-action="copy-ids" href="#" title="Copy list of account ids">C</a>)</th>
+            <th scope="col">Channel</th>
+            <th class="text-nowrap text-right" scope="col" width="140">Views</th>
+            <th class="text-nowrap text-right" scope="col" width="140">Subs <a data-update-youtube-channel="__ALL__" href="#">🔄</a></th>
+            <th class="text-nowrap text-right" scope="col" width="140"><abbr title="Aggregate YouTube Views">AYTV</abbr> <a data-youtube-creator-id="__ALL__" href="#">🔄</a></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for account in accounts %}
+          <tr data-account-id="{{account.key.id()}}">
+            <th class="text-right" scope="row">{{loop.index}}</th>
+            <td>
+              {{account|emoji}}
+              <img class="avatar" src="{{account.image_url}}" width="19" height="19">
+              <a href="/admin/accounts/{{account.key.id()}}/" title="@{{account.username}}&#10;Signed up {{account.created|pretty}}">@{{account.username|capped}}</a>
+              {% if account.created|recent(172800) %}<span title="Signed up {{account.created|deltafromnow|pretty}} ago">🆕</span>{% endif %}
+            </td>
+            <td>
+              {% if account.youtube_channel_id %}
+              {% if account.youtube_channel_thumb_url %}<img class="avatar" src="{{account.youtube_channel_thumb_url}}" width="19" height="19">{% endif %}
+              <a href="https://www.youtube.com/channel/{{account.youtube_channel_id}}" target="_blank" title="{{account.youtube_channel_title or 'Unknown Title'}}">
+                {% if account.youtube_channel_title %}{{account.youtube_channel_title|capped(30)}}{% else %}<em>Unknown Title</em>{% endif %}
+              </a>
+              {% else %}
+              <span class="text-muted">N/A</span>
+              {% endif %}
+            </td>
+            <td class="text-nowrap text-right">
+              {% if account.youtube_channel_views is not none %}{{account.youtube_channel_views|pretty}}{% else %}<span class="text-muted">N/A</span>{% endif %}
+            </td>
+            <td class="text-nowrap text-right">
+              {% if account.youtube_subs is not none %}{{account.youtube_subs|pretty}}{% else %}<span class="text-muted">N/A</span>{% endif %}
+              <a{% if account.youtube_subs_updated|recent(86400) %} class="fresh"{% endif %} data-update-youtube-channel="{{account.key.id()}}" href="#" title="Update{% if account.youtube_subs_updated %}&#10;{{account.youtube_subs_updated|deltafromnow|pretty}} ago{% endif %}">🔄</a>
+            </td>
+            <td class="text-nowrap text-right">
+              <a href="/admin/content/list/reaction/?by={{account.key.id()}}" title="{{account.content_count|pretty}} reaction(s)">{% if account.youtube_reaction_views is not none %}{{account.youtube_reaction_views|pretty}}{% else %}N/A{% endif %}</a>
+              <a{% if account.youtube_reaction_views_updated|recent(86400) %} class="fresh"{% endif %} data-youtube-creator-id="{{account.key.id()}}" href="#" title="Update{% if account.youtube_reaction_views_updated %}&#10;{{account.youtube_reaction_views_updated|deltafromnow|pretty}} ago{% endif %}">🔄</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endmacro %}
+      <div class="tab-content" id="accounts-tabContent">
+        <div class="tab-pane show active" id="accounts-aytv">
+          <p class="text-info">Sorted by Aggregate YouTube Views ({{accounts_by_aytv_total|pretty}} views among all)</p>
+          {{accounts_table(accounts_by_aytv)}}
+        </div>
+        <div class="tab-pane" id="accounts-subs">
+          <p class="text-info">Sorted by YouTube subscribers ({{accounts_by_subs_total|pretty}} subs among all)</p>
+          {{accounts_table(accounts_by_subs)}}
+        </div>
+        <div class="tab-pane" id="accounts-channel-views">
+          <p class="text-info">Sorted by YouTube channel views ({{accounts_by_views_total|pretty}} views among all)</p>
+          {{accounts_table(accounts_by_views)}}
+        </div>
+      </div>
+      <h2 id="originals">Originals</h2>
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th class="text-right" scope="col" width="60">#</th>
+            <th scope="col">Content</th>
+            <th class="text-nowrap text-right" scope="col" width="140"><abbr title="Aggregate YouTube Views">AYTV</abbr></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for content in originals %}
+          <tr>
+            <th class="text-right" scope="row">
+              {% if content.created|recent(172800) %}<span title="Created {{content.created|deltafromnow|pretty}} ago">🆕</span>{% endif %}
+              {{loop.index}}
+            </th>
+            <td>
+              <strong><a href="/admin/content/{{content.key.id()}}/">{{content.title or 'Untitled'}}</a></strong>
+              <br>
+              <span>{{content.related_count|pretty}} reaction{% if content.related_count != 1 %}s{% endif %}</span>
+            </td>
+            <td class="text-nowrap text-right">
+              <a href="/admin/content/list/reaction/?related_to={{content.key.id()}}">{% if content.youtube_reaction_views is not none %}{{content.youtube_reaction_views|pretty}}{% else %}N/A{% endif %}</a>
+              <a{% if content.youtube_reaction_views_updated|recent(86400) %} class="fresh"{% endif %} data-youtube-original-id="{{content.key.id()}}" href="#" title="Update{% if content.youtube_reaction_views_updated %}&#10;{{content.youtube_reaction_views_updated|deltafromnow|pretty}} ago{% endif %}">🔄</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <h2 id="reactions">Reactions</h2>
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th class="text-right" scope="col" width="60">#</th>
+            <th scope="col">Reaction</th>
+            <th class="text-nowrap text-right" scope="col" width="140">Views</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in reactions %}
+          <tr>
+            <th class="text-right" scope="row">
+              {% if item.reaction.created|recent(172800) %}<span title="Created {{item.reaction.created|pretty}}">🆕</span>{% endif %}
+              {{loop.index}}
+            </th>
+            <td>
+              <strong><a href="/admin/content/{{item.reaction.key.id()}}/">{{item.reaction.title or 'Untitled'}}</a></strong>
+              {% if 'is hidden' in item.reaction.tags %}
+              <span class="badge badge-secondary">HIDDEN</span>
+              {% endif %}
+              <br>
+              <span class="age {{item.reaction.created|freshness}}" title="Created {{item.reaction.created|pretty}}">{{item.reaction.created|deltafromnow|pretty}} ago</span>
+              | {{item.creator|emoji}}
+              <img class="avatar" src="{{item.creator.image_url}}" width="19" height="19">
+              <a href="/admin/accounts/{{item.creator.key.id()}}/" title="@{{item.creator.username}}&#10;Signed up {{item.creator.created|pretty}}">@{{item.creator.username|capped}}</a>
+              {% if item.related_to %}
+              | <a href="/admin/content/{{item.related_to.key.id()}}/">Original</a>
+              {% endif %}
+            </td>
+            <td class="text-nowrap text-right">
+              {% if item.reaction.youtube_broken %}⚠️ {% endif %}<a href="https://www.youtube.com/watch?v={{item.reaction.youtube_id}}" target="_blank">{% if item.reaction.youtube_views is not none %}{{item.reaction.youtube_views|pretty}}{% else %}N/A{% endif %}</a>
+              <a{% if item.reaction.youtube_views_updated|recent(86400) %} class="fresh"{% endif %} data-youtube-creator-id="{{item.creator.key.id()}}" href="#" title="Update{% if item.reaction.youtube_views_updated %}&#10;{{item.reaction.youtube_views_updated|deltafromnow|pretty}} ago{% endif %}">🔄</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </main>
+    <script>
+    Array.from(document.querySelectorAll('[data-action="copy-ids"]')).forEach(el => {
+      let p = el;
+      while (p && p.nodeName != 'TABLE') p = p.parentNode;
+      if (!p) return;
+      el.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        const ids = Array.from(p.querySelectorAll('[data-account-id]')).map(el => el.dataset.accountId);
+        navigator.clipboard.writeText(ids.join('\n'))
+          .then(_ => alert('List of account ids copied to clipboard.'));
+      });
+    });
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    async function runJob(jobId, dataValue, configureForm) {
+      const body = new FormData();
+      await configureForm(body, dataValue);
+      const r = await fetch(`/_ah/jobs/${jobId}`, {method: 'POST', body, credentials: 'include'});
+      if (!r.ok) throw Error('Bad status: ' + r.statusText);
+    }
+    const ALL_MARKER = '__ALL__';
+    async function runAllJobs(text, title, dataAttribute, jobId, configureForm) {
+      const datasetKey = dataAttribute.replace(/-\w/g, t => t.substr(1).toUpperCase());
+      const visitedValues = new Set();
+      for (const element of document.querySelectorAll(`[data-${dataAttribute}]`)) {
+        const dataValue = element.dataset[datasetKey];
+        if (dataValue == ALL_MARKER || visitedValues.has(dataValue)) continue;
+        visitedValues.add(dataValue);
+        await jobClicked(element, text, title, dataAttribute, jobId, configureForm);
+        await sleep(500);
+      }
+    }
+    async function jobClicked(element, text, title, dataAttribute, jobId, configureForm) {
+      if (element.classList.contains('job-pending')) return;
+      const datasetKey = dataAttribute.replace(/-\w/g, t => t.substr(1).toUpperCase());
+      const dataValue = element.dataset[datasetKey];
+      element.removeAttribute('href');
+      element.textContent = text.length < 3 ? '⏱' : text + ' ⏱';
+      element.title = title;
+      const elements = document.querySelectorAll(`[data-${dataAttribute}="${dataValue}"]`);
+      if (!Array.prototype.includes.call(elements, element)) console.warning(element, 'not in', elements)
+      for (const el of elements) el.classList.add('job-pending');
+      try {
+        if (dataValue == ALL_MARKER) {
+          await runAllJobs(text, title, dataAttribute, jobId, configureForm);
+        } else {
+          await runJob(jobId, dataValue, configureForm);
+        }
+        element.textContent = text.length < 3 ? '✅' : text + ' ✅';
+      } catch (e) {
+        console.error(e);
+        element.textContent = text.length < 3 ? '⚠️' : text + ' ⚠️';
+        element.title = `${e}`;
+      }
+      element.href = '#';
+      for (const el of elements) {
+        el.classList.add('job-has-run-once');
+        el.classList.remove('job-pending');
+      }
+    }
+    function addJobSchedulerHandler(element, dataAttribute, jobId, configureForm) {
+      const text = element.textContent;
+      const title = element.title;
+      element.addEventListener('click', async function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        jobClicked(element, text, title, dataAttribute, jobId, configureForm);
+      });
+    }
+    function setUpJobScheduler(dataAttribute, jobId, parameter, configureForm) {
+      for (const element of document.querySelectorAll(`[data-${dataAttribute}]`)) {
+        addJobSchedulerHandler(element, dataAttribute, jobId, parameter, configureForm);
+      }
+    }
+    setUpJobScheduler('update-youtube-channel', 'update_youtube_channel', (f, v) => f.set('account_id', v));
+    setUpJobScheduler('youtube-creator-id', 'update_youtube_views_batched', (f, v) => f.set('creator_id', v));
+    setUpJobScheduler('youtube-original-id', 'update_youtube_views_batched', (f, v) => f.set('original_id', v));
+    </script>
+  </body>
+</html>

@@ -1,0 +1,20 @@
+queue:
+
+# Batch reporting
+- name: bigquery-reporting
+  mode: pull
+
+# Bots
+- name: bots
+  rate: 10/s
+  bucket_size: 20
+  retry_parameters:
+    task_age_limit: 1h
+    task_retry_limit: 2
+
+# Jobs
+- name: jobs
+  rate: 10/s
+  bucket_size: 20
+  retry_parameters:
+    task_retry_limit: 100

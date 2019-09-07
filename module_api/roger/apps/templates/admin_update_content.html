@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Update Content</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
+	</head>
+	<body>
+		<div class="container">
+			<div class="row">
+				<div class="col-12">
+					{% if not content %}
+					<h2>Enter Content URL/ID</h2>
+					<p><input class="form-control" placeholder="https://watch.fika.io/-/..." size="50"></p>
+					<p><button class="btn btn-primary">Go</button></p>
+					<script>
+						document.querySelector('button').addEventListener('click', () => {
+							const value = document.querySelector('input').value;
+							const pieces = value.split('/');
+							location.href = `/admin/update_content/${pieces[pieces.length - 1]}/`;
+						});
+					</script>
+					{% else %}
+					<h2><code>{{content.key.id()}}</code></h2>
+					<p><video controls src="{{content.url}}" width="135" height="240"></video></p>
+					<p>Video in <strong>{{stream.presentation_title}}</strong></p>
+					<form enctype="multipart/form-data" method="POST">
+						<h3>Title</h3>
+						<p>
+							<input class="form-control" name="title" placeholder="(No title)" size="50" value="{{content.properties.get('title') or ''}}">
+						</p>
+						<p><button class="btn btn-success" type="submit">Update</button></p>
+						<h3>Attachments</h3>
+						{% for a in content.attachments %}
+						<p><a href="{{a.url}}">{{a.title}}</a> <button class="btn btn-xs btn-danger" name="delete-attachment" type="submit" value="{{a.url}}">Delete</button></p>
+						{% endfor %}
+						<p>
+							<input class="form-control" name="attachment-title" placeholder="Title (defaults to filename)" size="50">
+						</p>
+						<p>
+							<input class="form-control" name="attachment-file" type="file">
+							<em>or</em>
+							<input class="form-control" name="attachment-url" placeholder="https://...">
+						</p>
+						<p><button class="btn btn-success" type="submit">Add Attachment</button></p>
+						<h3>Subtitles</h3>
+						<table class="table table-hover">
+							<thead>
+								<tr><th width="75">Start</th><th width="75">⏱</th><th width="75">End</th><th>Text</th></tr>
+							</thead>
+							<tbody>
+								{% for t in content.properties['text'] %}
+								<tr>
+									<td><input name="sub-start" style="font-family: monospace; text-align: right;" value="{{t['start']}}" size="6"></td>
+									<td><input name="sub-duration" style="font-family: monospace; text-align: right;" value="{{t['duration']}}" size="6"></td>
+									<td style="font-family: monospace; text-align: right;">0</td>
+									<td><input class="form-control" name="sub-text" value="{{t['text']}}" size="30"></td>
+								</tr>
+								{% endfor %}
+							</tbody>
+						</table>
+						<p><button class="btn btn-success" type="submit">Update Subtitles</button></p>
+					</form>
+					{% endif %}
+				</div>
+			</div>
+		</div>
+	</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>{% if user %}{{user.display_name}} » Recents{% else %}Uh-oh!{% endif %}</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
+	</head>
+	<body>
+		<div class="container">
+			<h1>{% if user %}<a href="..">{{user.display_name or user.account_id}}</a> » Recents{% else %}Uh-oh!{% endif %}</h1>
+			{% if error %}
+			<div class="panel panel-danger">
+				<div class="panel-heading">
+					<h3 class="panel-title">Error</h3>
+				</div>
+				<div class="panel-body">{{error}}</div>
+			</div>
+			{% endif %}
+			<form class="form-inline" method="POST">
+				<p>
+						<input class="form-control input-sm" name="create-stream-identifiers" placeholder="identifier1, identifier2, ..." size="25">
+						<button class="btn btn-sm btn-success" name="create-stream" value="true">Get/Create</button>
+				</p>
+			</form>
+			<form method="POST">
+				<p>
+					<span>With selected streams:</span>
+					<button class="btn btn-default btn-xs" name="action" value="hide" type="submit">Hide</button>
+					<button class="btn btn-default btn-xs" name="action" value="leave" type="submit">Leave</button>
+				</p>
+				<table class="table table-hover">
+					<thead>
+						<tr>
+							<th width="30"><input id="check-all" type="checkbox"></th>
+							<th width="250">Stream</th>
+							<th>Participants</th>
+							<th width="150">Last Interaction</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for stream in recents %}
+						<tr{% if not stream.is_played %} class="info"{% endif %}>
+							<td><input name="selected" type="checkbox" value="{{stream.key.id()}}"></td>
+							<td class="text-nowrap"{% if not stream.is_played %} style="font-weight:bold;"{% endif %}><a href="./{{stream.key.id()}}">
+								{% if stream.title %}{{stream.title}}{% else %}<em>Untitled</em>{% endif %}</a>{% if stream.service_content_id %} <strong title="{{stream.service_content_id}}">*</strong>{% endif %}
+							</td>
+							<td>
+								{% for p in stream.get_others() %}
+								<a href="/admin/accounts/{{p.key.id()}}/streams/">{{p.display_name}}</a>{% if not loop.last %},{% endif %}
+								{% else %}
+								<em>No one else</em>
+								{% endfor %}
+							</td>
+							<td class="text-nowrap">{{stream.last_interaction.strftime('%Y-%m-%d %H:%M:%S')}}</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</form>
+			<script>
+				const checkAll = document.getElementById('check-all');
+				checkAll.onchange = () => {
+					document.querySelectorAll('input[type=checkbox]').forEach((checkbox) => {
+						checkbox.checked = checkAll.checked;
+					});
+				};
+			</script>
+			{% if cursor %}
+			<div class="form-group clearfix">
+				<p class="clearfix">
+					<a class="btn btn-default" href="?next={{cursor}}">Next</a>
+				</p>
+			</div>
+			{% endif %}
+		</div>
+	</body>
+</html>

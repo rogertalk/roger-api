@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>{% if item %}{{item.title or 'Untitled'}}{% else %}Create new public request{% endif %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.css" integrity="sha256-CNwnGWPO03a1kOlAsGaH5g8P3dFaqFqqGFV/1nkX5OU=" crossorigin="anonymous">
+    <script src="//code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha256-3edrmyuQ0w65f8gfBsqowzjJe2iM6n0nKciPUp8y+7E=" crossorigin="anonymous"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.bundle.min.js" integrity="sha384-feJI7QwhOS+hwpX2zkaeJQjeiwlhOP+SdQDqhgvvo1DsjtiSQByFdThsxO669S2D" crossorigin="anonymous"></script>
+    <style>
+    .avatar {
+      background-color: #fafafa;
+      background-position: 50% 50%;
+      background-size: cover;
+      border-radius: 9999px;
+      object-fit: cover;
+      position: relative;
+      transition: transform 200ms;
+      z-index: 1;
+    }
+    .avatar:hover {
+      transform: scale(6);
+      z-index: 2;
+    }
+    .coin {
+      vertical-align: text-bottom;
+    }
+    .fresh {
+      filter: grayscale(100%);
+      opacity: .4;
+    }
+    #wallets-table table {
+      font-size: 13px;
+    }
+    body {
+      padding-bottom: 300px;
+    }
+    iframe {
+      background: #000;
+      bottom: 5px;
+      left: 5px;
+      position: fixed;
+      z-index: 3;
+    }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <nav aria-label="breadcrumb" class="mt-5">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/admin/">Admin</a></li>
+          <li class="breadcrumb-item"><a href="/admin/requests/">Public Requests</a></li>
+          <li class="breadcrumb-item active" aria-current="page">{% if item %}{{item.title or 'Untitled'}}{% else %}New public request{% endif %}</li>
+        </ol>
+      </nav>
+      {% if item %}
+      <div class="mb-4">
+        <h1 class="display-4 mb-0">{{item.title or 'Untitled'}}</h1>
+        {% if item.subtitle %}<h2 class="{% if not item.wallet %}mb-0 {% endif %}text-muted">{{item.subtitle}}</h2>{% endif %}
+        {% if item.wallet %}<p>Reward remaining: <strong>{{item.wallet.balance|pretty}}</strong> <img alt="Coins" class="coin" src="/admin/static/coin.png" width="19" height="19" title="Coins"></p>{% endif %}
+      </div>
+      {% else %}
+      <h1 class="display-4 mb-4">Create new public request</h1>
+      {% endif %}
+      <form action="/admin/requests/{% if item %}{{item.request.key.id()}}{% else %}new{% endif %}/" method="POST">
+        {% if error %}
+        <div class="alert alert-danger" role="alert">
+          <h4 class="alert-heading">Ruh-roh! 😟</h4>
+          <p class="mb-0">{{error}}</p>
+        </div>
+        <hr>
+        {% endif %}
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Request For</label>
+          <div class="col-sm-10">
+            <input name="content-id" type="text" class="form-control" placeholder="1234567890" value="{{item.content.key.id() if item else ''}}">
+            <small class="form-text text-muted">
+              {% if item %}
+              <a href="/admin/content/{{item.content.key.id()}}/">{{item.content.title or 'Go to content page'}}</a>
+              {% else %}
+              Enter the id of the content the request is for above.
+              {% endif %}
+            </small>
+          </div>
+        </div>
+        {% if item %}
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Requested</label>
+          <div class="col-sm-10">
+            <input disabled name="requested" type="text" class="form-control" placeholder="1970-01-01 00:00:00.000" value="{{item.request.requested|datetimewithms}}">
+            <small class="form-text text-muted">Local time: <span data-utc="{{item.request.requested|ms}}">{{item.request.requested}}</span></small>
+          </div>
+        </div>
+        {% endif %}
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Requested By</label>
+          <div class="col-sm-10">
+            <input name="requested-by" type="text" class="form-control" placeholder="1234567890" value="{{item.requested_by.key.id() if item else ''}}">
+            <small class="form-text text-muted">
+              {% if item %}
+              Account: <a href="/admin/accounts/{{item.requested_by.key.id()}}/">{{item.requested_by.username}}</a>
+              {{item.requested_by|emoji}}
+              {% else %}
+              Enter the username or id of the account requesting reactions.
+              {% endif %}
+            </small>
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Tags</label>
+          <div class="col-sm-10">
+            <input name="tags" type="text" class="form-control" placeholder="default, pending" value="{{item.request.tags|sort|join(', ') if item else 'approved, default'}}">
+            <small class="form-text text-muted">Comma-separated list of tags.</small>
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Sort Index</label>
+          <div class="col-sm-10">
+            <input name="sort-index" type="text" class="form-control text-primary" placeholder="(autogenerate)" value="{{(item.request.sort_index or '') if item else ''}}">
+          </div>
+        </div>
+        {% if item %}
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Properties</label>
+          <div class="col-sm-10">
+            <p class="form-text"><pre id="properties-json">{{item.request.properties|pretty if item else ''}}</pre></p>
+          </div>
+        </div>
+        {% endif %}
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">{% if item %}Update properties{% else %}Properties{% endif %}</label>
+          <div class="col-sm-10">
+            <textarea class="form-control" id="properties-field" name="properties" placeholder="{&quot;subtitle&quot;: &quot;Bhad Bhabie feat. Lil Gucci&quot;}" rows="3" style="font-family: monospace;">{}</textarea>
+            {% if item %}
+            <p class="help-block">Enter JSON to merge into properties. For example, <code>{"subtitle": "Bhad Bhabie feat. Lil Gucci"}</code> will update the subtitle. Unset properties by setting value to <code>null</code>. <strong>Don’t specify all properties, only the ones you want to change!</strong></p>
+            <p><button class="btn btn-secondary" id="properties-unset" type="button">Unset all properties</button></p>
+            {% else %}
+            <p class="help-block">Enter JSON to use as properties. For example, <code>{"subtitle": "Bhad Bhabie feat. Lil Gucci"}</code> will set the subtitle.</p>
+            {% endif %}
+          </div>
+        </div>
+        <script>
+        (function () {
+          const propsValue = document.getElementById('properties-json');
+          const propsField = document.getElementById('properties-field');
+          if (!propsValue || !propsField) return;
+          // Inject links and clickable property names in the prettified JSON output.
+          let html = propsValue.innerHTML;
+          const r1 = ($0, quot, url) => `${quot}<a href="${url}" target="_blank">${url}</a>${quot}`;
+          html = html.replace(/("|&#34;|&quot;)(https?:\/\/(?:(?!\1).)+)\1/g, r1);
+          const r2 = ($0, pre, $2, name, post) => `${pre}<a class="text-dark" data-set-property="${name}" href="#">${name}</a>${post}`;
+          html = html.replace(/^(\s*("|&#34;|&quot;))((?:(?!\2).)+)(\2:)/gm, r2);
+          console.log(html)
+          propsValue.innerHTML = html;
+          // Make clickable property names work.
+          const setProps = document.querySelectorAll('[data-set-property]');
+          for (const el of setProps) {
+            el.addEventListener('click', e => {
+              e.preventDefault();
+              e.stopPropagation();
+              const name = e.target.dataset.setProperty;
+              const o = {[name]: JSON.parse(propsValue.textContent)[name]};
+              propsField.value = JSON.stringify(o, null, '  ');
+            });
+          }
+          // Implement the "Unset all properties" button.
+          const unset = document.getElementById('properties-unset');
+          if (unset) {
+            unset.addEventListener('click', e => {
+              e.preventDefault();
+              e.stopPropagation();
+              let value = JSON.parse(propsValue.textContent);
+              value = Object.keys(value).reduce((o, k) => (o[k] = null) || o, {});
+              e.target.form.elements['properties'].value = JSON.stringify(value, null, '  ');
+            });
+          }
+        })();
+        </script>
+        <hr>
+        <div class="form-group row">
+          <div class="offset-sm-2 col-sm-10">
+            {% if item %}
+            <button class="btn btn-warning btn-lg" type="submit">Update!</button>
+            {% else %}
+            <button class="btn btn-success btn-lg" type="submit">Create!</button>
+            {% endif %}
+          </div>
+        </div>
+      </form>
+      {% if item %}
+      <hr>
+      <h3>Wallets</h3>
+      <table class="table table-bordered table-hover" id="wallets-table">
+        <thead>
+          <tr>
+            <th>Id</th>
+            <th width="240">Last Update</th>
+            <th class="text-right">Balance</th>
+            <th>Comment</th>
+            <th class="text-center" width="80"></th>
+          </tr>
+        </thead>
+        <tbody id="wallets-rows"><tr><td colspan="5">Please wait...</td></tr></tbody>
+      </table>
+      <script>
+      const primaryWalletId = {% if item.wallet %}'{{item.wallet.key.id()}}'{% else %}null{% endif %};
+      const walletsRows = document.getElementById('wallets-rows');
+      function fetchWallets() {
+        const xhr = new XMLHttpRequest();
+        xhr.addEventListener('load', function () {
+          const data = JSON.parse(this.responseText);
+          let rows = '';
+          for (let i = 0; i < data.wallets.length; i++) {
+            const wallet = data.wallets[i];
+            rows += `<tr data-wallet="${wallet.id}">`;
+            rows += `<td style="${wallet.id == primaryWalletId ? 'font-weight: bold;' : ''}"><code>${wallet.id}</code></td>`;
+            rows += `<td title="Created: ${new Date(wallet.created)}">${timestamp(wallet.updated)}</td>`;
+            rows += `<td class="text-right" title="+${wallet.total_received} -${wallet.total_sent}">${wallet.balance}</td>`;
+            rows += `<td style="white-space: normal;">${wallet.comment.replace('<', '&lt;')}</td>`;
+            if (!wallet.id.match(/^(admin_|itunes_)/)) {
+              rows += `<td class="text-center"><form method="POST"><input name="add-to-wallet" type="hidden" value="${wallet.id}"><button class="btn btn-sm btn-success" disabled onclick="return confirm('Continue?')" type="submit">Top up</button></form></td>`;
+            } else {
+              rows += `<td class="text-center">&nbsp;</td>`;
+            }
+            rows += `</tr>\n`;
+          }
+          walletsRows.innerHTML = rows || '<tr><td colspan="5">This request has no wallets.</td></tr>';
+        });
+        xhr.open('GET', '/admin/wallets.json?request_id={{item.request.key.id()}}');
+        xhr.send();
+      }
+      fetchWallets();
+      function fetchWalletTransactions(walletId) {
+        const href = `/admin/wallet_transactions.json?wallet_id=${walletId}`;
+        return fetch(href, {credentials: 'include'})
+          .then(r => r.json())
+          .then(data => data.transactions);
+      }
+      const loadedWalletIds = new Set();
+      walletsRows.addEventListener('click', async e => {
+        if (e.target.nodeName == 'BUTTON') {
+          e.stopPropagation();
+          return;
+        }
+        let tr = e.target;
+        while (tr && tr.nodeName != 'TR') tr = tr.parentNode;
+        if (!tr || !tr.dataset.wallet || loadedWalletIds.has(tr.dataset.wallet)) return;
+        loadedWalletIds.add(tr.dataset.wallet);
+        const container = document.createElement('tr');
+        container.innerHTML = '<td colspan="5">Please wait...</td>';
+        walletsRows.insertBefore(container, tr.nextSibling);
+        const txs = await fetchWalletTransactions(tr.dataset.wallet);
+        let html = '';
+        html += `<td colspan="5">\n`;
+        html += `<table class="table table-sm table-bordered table-striped">\n`;
+        html += `<thead><tr><th width="60">Id</th><th width="190">Timestamp</th><th>From</th><th>To</th><th class="text-right" width="60">Change</th><th>Comment</th></tr></thead>\n`;
+        html += `<tbody>\n`;
+        for (let tx of txs) {
+          html += `<tr>`;
+          html += `<td title="${tx.id}"><code>${tx.id.substr(0, 6)}…</code></td>`;
+          html += `<td>${timestamp(tx.timestamp)}</td>`;
+          html += `<td><a href="/admin/accounts/${tx.sender.id}/" title="Wallet: ${tx.sender_wallet_id}">@${tx.sender.username}</a></td>`;
+          html += `<td><a href="/admin/accounts/${tx.receiver.id}/" title="Wallet: ${tx.receiver_wallet_id}">@${tx.receiver.username}</a></td>`;
+          html += `<td class="text-right" style="color: #${tx.delta < 0 ? 'c00' : '0a0'};" title="${tx.old_balance} -> ${tx.new_balance}">${tx.delta > 0 ? '+' + tx.delta : tx.delta}</td>`;
+          html += `<td class="text-truncate" title="${tx.comment.replace('"', '&quot;').replace('<', '&lt;')}">${tx.comment.replace('<', '&lt;')}</td>`;
+          html += `</tr>\n`;
+        }
+        html += `</tbody>\n`;
+        html += `</table>\n`;
+        html += `</td>`;
+        container.innerHTML = html;
+      });
+      </script>
+      {% if not item.wallet %}
+      <h4>Create reward wallet</h4>
+      <p>Create the wallet which will hold the reward balance that gets distributed to users that react to the request.</p>
+      <form action="/admin/requests/{{item.request.key.id()}}/" method="POST">
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Wallet Owner</label>
+          <div class="col-sm-10">
+            <input name="new-wallet-owner" type="text" class="form-control" placeholder="1234567890" value="{{item.requested_by.username}}">
+            <small class="form-text text-muted">The account that will own this wallet. Try to make sure this is an account associated with whoever is paying for the wallet balance.</small>
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Initial Balance</label>
+          <div class="col-sm-10">
+            <input name="new-wallet-balance" type="text" class="form-control" placeholder="0">
+            <small class="form-text text-muted">Carefully review this number as it will create new currency which users can get real money from!</small>
+          </div>
+        </div>
+        <hr>
+        <div class="form-group row">
+          <div class="offset-sm-2 col-sm-10">
+            <button class="btn btn-success btn-lg" type="submit">Create</button>
+          </div>
+        </div>
+      </form>
+      {% endif %}
+      <h3 id="entries">Entries</h3>
+      {% macro table(items) %}
+      <table class="table table-bordered table-hover">
+        <thead>
+          <tr>
+            <th width="280">Creator / Status</th>
+            <th>Reaction</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in items %}
+          <tr data-id="{{i.account.key.id()}}">
+            <td>
+              <img class="avatar" src="{{i.account.image_url}}" width="19" height="19">
+              <a href="/admin/accounts/{{i.account.key.id()}}/" title="@{{i.account.username}}&#10;Signed up {{i.account.created|pretty}}">@{{i.account.username|capped}}</a>
+              {{i.account|emoji}}
+              {% if i.account.created|recent(172800) %}<span title="Signed up {{i.account.created|deltafromnow|pretty}} ago">🆕</span>{% endif %}
+              <br><code title="C: {{i.entry.created|deltafromnow|pretty}} ago&#10;U: {{i.entry.updated|deltafromnow|pretty}} ago">{{i.entry.status}}</code>
+              {% if i.entry.status == 'pending-review' %}
+              <a data-action="approve" data-content-id="{{i.content.key.id() if i.content else ''}}" href="#" title="Approve this entry">✅</a>
+              <a data-action="deny" data-content-id="{{i.content.key.id() if i.content else ''}}" href="#" title="Deny this entry">🚫</a>
+              {% elif i.entry.status in ('active', 'denied', 'inactive') %}
+              <a data-action="restore" data-content-id="{{i.content.key.id() if i.content else ''}}" href="#" title="Put entry back in review">🔙</a>
+              {% endif %}
+              {% if i.entry.status != 'open' %}
+              <a data-action="reset" data-content-id="{{i.content.key.id() if i.content else ''}}" href="#" title="Reset entry (remove content)">🚮</a>
+              {% endif %}
+              {% if i.entry.status_reason %}
+              <br><small>“{{i.entry.status_reason}}”</small>
+              {% endif %}
+              {% if i.content.youtube_id %}
+              <br><small><a data-play-iframe="https://www.youtube.com/embed/{{i.content.youtube_id}}?autoplay=1" href="#">Play YouTube video</a></small>
+              {% endif %}
+            </td>
+            <td>
+              {% if i.content %}
+              <a href="/admin/content/{{i.content.key.id()}}/">
+              {% if i.content.title %}<strong>{{i.content.title}}</strong>{% else %}<em>Untitled</em>{% endif %}
+              </a>
+              <br>
+              <small>
+              {{(i.entry.reward_earned or 0)|pretty}} <img alt="Coins" class="coin" src="/admin/static/coin.png" width="15" height="15" title="Coins">
+              {% if i.content.original_url %}
+                | <a href="{{i.content.original_url}}" target="_blank">Original</a>
+              {% endif %}
+              {% if i.content.slug %}
+                | <a href="https://www.reaction.cam/v/{{i.content.slug}}" target="_blank">Web</a>
+              {% endif %}
+              {% if i.content.youtube_id %}
+                | <a href="https://www.youtube.com/watch?v={{i.content.youtube_id}}" target="_blank">{% if i.content.youtube_broken %}⚠️{% endif %}YouTube{% if i.content.youtube_views %} ({{i.content.youtube_views|pretty}}){% endif %}</a>
+                <a{% if i.content.youtube_views_updated|recent(86400) %} class="fresh"{% endif %} data-update-youtube-views="{{i.content.key.id()}}" href="#" title="Update{% if i.content.youtube_views_updated %}&#10;{{i.content.youtube_views_updated|deltafromnow|pretty}} ago{% endif %}">🔄</a>
+                {% if not i.entry.youtube_id %}
+                | <span title="The reaction has a YouTube video id, but not the entry!">🛑</span>
+                {% elif i.entry.youtube_id != i.content.youtube_id %}
+                | <span title="The reaction YouTube video id does not match the one on the entry!&#10;We will keep counting views on the content’s latest YouTube id.">🛑</span>
+                {% endif %}
+              {% endif %}
+              <br><code>{{i.content.useragent}}</code>
+              </small>
+              {% else %}
+              <em>Not uploaded yet.</em>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="2">There are no entries to show here.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endmacro %}
+      <h4>Waiting for review</h4>
+      {{table(review_entries)}}
+      <h4>Active</h4>
+      {{table(active_entries)}}
+      <h4>Inactive</h4>
+      {{table(inactive_entries)}}
+      {% if showing_extra_entries %}
+      <h4>Pending</h4>
+      {{table(pending_entries)}}
+      <h4>Denied</h4>
+      {{table(denied_entries)}}
+      {% else %}
+      <p>You can also <a href="/admin/requests/{{item.request.key.id()}}/?show_extras=true#entries">show pending and denied entries</a>.</p>
+      {% endif %}
+      {% endif %}
+    </main>
+    <iframe id="iframe-player" type="text/html" width="400" height="225" frameborder="0" allowfullscreen></iframe>
+    <script>
+    Array.from(document.querySelectorAll('[data-utc]')).forEach(node => {
+      node.textContent = new Date(parseInt(node.dataset.utc)).toLocaleString();
+    });
+    function timestamp(ms) {
+      return new Date(ms).toLocaleString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+    }
+    {% if item %}
+    document.body.addEventListener('click', e => {
+      const a = e.target;
+      let tr = a;
+      while (tr && tr.nodeName != 'TR') tr = tr.parentNode;
+      if (a.nodeName != 'A') return;
+      if (a.dataset.playIframe) {
+        document.querySelector('iframe').src = a.dataset.playIframe;
+        e.preventDefault();
+        // Remove previously marked table row.
+        let oldTr = document.querySelector('tr.table-primary');
+        if (oldTr) oldTr.classList.remove('table-primary');
+        // Mark the table row for the playing video.
+        if (tr) tr.classList.add('table-primary');
+        return;
+      }
+      const action = a.dataset.action;
+      if (!action) return;
+      const id = parseInt(a.parentNode.parentNode.dataset.id);
+      if (!Number.isInteger(id)) return;
+      e.preventDefault();
+      if (action == 'restore' || action == 'reset') {
+        if (!confirm(`Are you sure you want to ${action} this entry?`)) return;
+      }
+      const body = new FormData();
+      body.set('action', action);
+      const contentId = parseInt(a.dataset.contentId);
+      if (Number.isInteger(contentId)) {
+        body.set('content-id', contentId.toString());
+      }
+      fetch(`/admin/requests/{{item.request.key.id()}}/${id}`, {body, credentials: 'include', method: 'POST'})
+        .then(r => {
+          if (tr && (action == 'approve' || action == 'deny')) {
+            tr.classList.remove('table-primary');
+            if (!r.ok) {
+              alert(`Error ${r.status}!`);
+              return;
+            }
+            tr.classList.add(action == 'approve' ? 'table-success' : 'table-danger');
+            return;
+          }
+          // TODO: Update without reloading page.
+          location.reload();
+        });
+    });
+    {% endif %}
+    function addJobSchedulerHandler(element, datasetKey, jobId, configureForm) {
+      const text = element.textContent;
+      const title = element.title;
+      let pending = false;
+      element.addEventListener('click', async function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (pending) return;
+        this.removeAttribute('href');
+        this.textContent = text.length < 3 ? '⏱' : text + ' ⏱';
+        this.title = title;
+        pending = true;
+        try {
+          const body = new FormData();
+          await configureForm(body, this.dataset[datasetKey]);
+          const r = await fetch(`/_ah/jobs/${jobId}`, {method: 'POST', body, credentials: 'include'});
+          if (!r.ok) throw Error('Bad status: ' + r.statusText);
+          this.textContent = text.length < 3 ? '✅' : text + ' ✅';
+        } catch (e) {
+          console.error(e);
+          this.textContent = text.length < 3 ? '⚠️' : text + ' ⚠️';
+          this.title = `${e}`;
+        }
+        this.href = '#';
+        pending = false;
+      });
+    }
+    function setUpJobScheduler(dataAttribute, jobId, parameter, configureForm) {
+      const datasetKey = dataAttribute.replace(/-\w/g, t => t.substr(1).toUpperCase());
+      for (const element of document.querySelectorAll('[data-' + dataAttribute + ']')) {
+        addJobSchedulerHandler(element, datasetKey, jobId, parameter, configureForm);
+      }
+    }
+    setUpJobScheduler('update-youtube-views', 'update_youtube_views', (f, v) => f.set('content_id', v));
+    </script>
+  </body>
+</html>

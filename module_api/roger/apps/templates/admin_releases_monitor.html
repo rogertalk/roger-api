@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Release Activity</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="//code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha256-3edrmyuQ0w65f8gfBsqowzjJe2iM6n0nKciPUp8y+7E=" crossorigin="anonymous"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.bundle.min.js" integrity="sha384-feJI7QwhOS+hwpX2zkaeJQjeiwlhOP+SdQDqhgvvo1DsjtiSQByFdThsxO669S2D" crossorigin="anonymous"></script>
+    <style>
+    ::placeholder {
+      color: #dadada !important;
+    }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <nav aria-label="breadcrumb" class="mt-5">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/admin/">Admin</a></li>
+          <li class="breadcrumb-item">Releases</li>
+          <li class="breadcrumb-item active" aria-current="page">Activity</li>
+        </ol>
+      </nav>
+      <h1 class="display-4">Release Activity</h1>
+      <p class="lead">See recent activity on release pages. All time ranges are specified in New York’s time zone.</p>
+      <section data-days-ago="1"></section>
+      <h2 class="mt-4">Send Email</h2>
+      <form id="email-form">
+        <fieldset>
+          <div class="form-group">
+            <label for="email-template_name">Template</label>
+            <select class="form-control" id="email-template_name" name="template_name">
+              <option>artist_analytics</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="email-to">To (email address / name)</label>
+            <div class="form-row">
+              <div class="col">
+                <input class="form-control" id="email-to" name="to" placeholder="bob@gmail.com" required>
+              </div>
+              <div class="col">
+                <input class="form-control" id="email-to_name" name="to_name" placeholder="Bob Joe">
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="email-sender">Sender (email address / name)</label>
+            <div class="form-row">
+              <div class="col">
+                <input class="form-control" id="email-sender" name="sender" placeholder="artists@reaction.cam" value="artists@reaction.cam" required>
+              </div>
+              <div class="col">
+                <input class="form-control" id="email-sender_name" name="sender_name" placeholder="Artists Team" value="Artists Team" required>
+              </div>
+            </div>
+          </div>
+          <hr>
+          <div class="form-group row">
+            <label class="col-sm-2 col-form-label" for="email-report_date"><code>report_date</code></label>
+            <div class="col-sm-10">
+              <input class="form-control" id="email-report_date" name="report_date" required value="{{report_date}}">
+            </div>
+          </div>
+          <div class="form-group row">
+            <label class="col-sm-2 col-form-label" for="email-click_count"><code>click_count</code></label>
+            <div class="col-sm-10">
+              <input class="form-control" id="email-click_count" name="click_count" required value="0">
+            </div>
+          </div>
+          <div class="form-group row">
+            <label class="col-sm-2 col-form-label" for="email-reaction_count"><code>reaction_count</code></label>
+            <div class="col-sm-10">
+              <input class="form-control" id="email-reaction_count" name="reaction_count" required value="0">
+            </div>
+          </div>
+          <div class="form-group row">
+            <label class="col-sm-2 col-form-label" for="email-release_url"><code>release_url</code></label>
+            <div class="col-sm-10">
+              <input class="form-control" id="email-release_url" name="release_url" required value="http://rcam.at/">
+            </div>
+          </div>
+          <hr>
+          <button class="btn btn-primary">Send</button>
+        </fieldset>
+      </form>
+    </main>
+    <script>
+    function escapeHTML(text) {
+      return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '&#10;');
+    }
+
+    document.getElementById('email-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const form = new FormData(e.target);
+      const templateName = form.get('template_name');
+      form.delete('template_name');
+      const kwargs = {cc_sender: false};
+      for (const [key, value] of form.entries()) {
+        kwargs[key] = value;
+      }
+      const body = new FormData();
+      body.set('args', JSON.stringify(['reactioncam', templateName]));
+      body.set('kwargs', JSON.stringify(kwargs));
+      const fieldset = e.target.querySelector('fieldset');
+      fieldset.disabled = true;
+      const r = await fetch('/admin/send-email.json', {body, credentials: 'include', method: 'POST'});
+      fieldset.disabled = false;
+      if (r.ok) {
+        e.target.reset();
+      } else {
+        alert('Failed to send email');
+      }
+    });
+
+    const prop = 'daysAgo';
+    const attr = 'data-' + prop.replace(/[A-Z]/g, c => '-' + c.toLowerCase());
+    const observer = new MutationObserver(mutations => {
+      for (const record of mutations) {
+        if (record.attributeName != attr) continue;
+        if (record.oldValue == record.target.dataset[prop]) break;
+        runQuery(record.target);
+        break;
+      }
+    });
+    function initQuery(container) {
+      observer.observe(container, {attributes: true, attributeOldValue: true});
+      runQuery(container);
+    }
+
+    const accountCache = {};
+    const accountPendingIds = new Set();
+    async function lookUpAccountInternal(accountId) {
+      // Ensure that the account id is a valid integer.
+      accountId = parseInt(accountId);
+      if (!Number.isInteger(accountId)) throw Error('Invalid account id');
+      // Check if the current id has already been handled.
+      const stringId = accountId.toString();
+      if (accountCache[stringId]) return accountCache[stringId];
+      // Current id is new, add it to pending batch.
+      accountPendingIds.add(accountId);
+      // Exit current run loop to allow ids to accumulate.
+      await new Promise(r => setTimeout(r, 0));
+      // Check if another call to this function handled the current batch before this one.
+      if (accountCache[stringId]) return accountCache[stringId];
+      // This is the first instance handling the current batch, so extract the ids.
+      const ids = Array.from(accountPendingIds.values());
+      accountPendingIds.clear();
+      // Initiate the batch request.
+      const path = `/admin/account.json?identifiers=${ids.toString()}`;
+      const promise = fetch(path, {credentials: 'include'}).then(r => r.json());
+      // Assign a promise for each requested id in the cache.
+      ids.forEach((id, i) => {
+        const stringId = id.toString();
+        if (accountCache[stringId]) throw Error(`Did not expect ${id} in cache`);
+        accountCache[stringId] = promise.then(list => {
+          // Replace promise in cache with actual account data.
+          accountCache[stringId] = list[i];
+          return list[i];
+        });
+      });
+      // Finally, return the correct promise for the requested account id.
+      if (!accountCache[stringId]) throw Error(`Expected ${stringId} in cache`);
+      return accountCache[stringId];
+    }
+
+    async function lookUpAccount([accountId, contentStats]) {
+      const [account, content] = await Promise.all([
+        lookUpAccountInternal(accountId),
+        Promise.all(Object.entries(contentStats).map(lookUpContent))]);
+      content.sort((a, b) => (b.stats.view || 0) - (a.stats.view || 0));
+      const totals = {view: 0};
+      for (const c of content) {
+        for (const [activity, values] of Object.entries(c.stats)) {
+          totals[activity] = (totals[activity] || 0) + values.count;
+        }
+      }
+      return {account, content, totals};
+    }
+
+    const contentCache = {};
+    async function lookUpContent([contentId, stats]) {
+      if (contentCache[contentId]) {
+        return {content: contentCache[contentId], stats};
+      }
+      const result = await fetch(`https://api.reaction.cam/v53/content/${contentId}`).then(r => r.json());
+      contentCache[result.content.id.toString()] = result.content;
+      return {content: result.content, stats};
+    }
+
+    async function runQuery(container) {
+      const daysAgo = parseInt(container.dataset[prop]);
+      if (!Number.isInteger(daysAgo) || daysAgo < 0) throw Error(`Invalid ${attr} value`);
+
+      let html = '';
+      let title;
+      if (daysAgo === 0) {
+        const time = new Date().toLocaleString('en-US', {
+          hour: 'numeric',
+          minute: 'numeric',
+          timeZone: 'America/New_York',
+          timeZoneName: 'short'
+        });
+        title = `Today (up until ${time})`;
+      } else if (daysAgo === 1) {
+        title = 'Yesterday';
+      } else {
+        title = `${daysAgo} Days Ago`;
+      }
+      html += `<h2 class="mt-4">${escapeHTML(title)}</h2>\n`;
+      if (daysAgo < 1) {
+        html += '<p><a href="action:previous">Previous day</a> • <a href="action:refresh">Refresh</a></p>';
+      } else {
+        html += '<p><a href="action:previous">Previous day</a> • <a href="action:next">Next day</a></p>';
+      }
+      html += '<table class="table">\n';
+      html += '<thead>\n';
+      html += '<tr><th>Account</th><th class="text-right" width="150">Total views</th><th class="text-right" width="150">Total clicks</th></tr>';
+      html += '</thead>\n';
+      html += '<tbody>\n';
+      html += '<tr><td colspan="3"><div class="progress"><div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%;"></div></div></td></tr>';
+      html += '</tbody>\n';
+      html += '</table>\n';
+      container.innerHTML = html;
+      html = '';
+
+      const path = `/admin/query/release-link-activity.json?days_ago=${daysAgo}`;
+      const r = await fetch(path, {credentials: 'include'});
+      if (!r.ok) throw Error(`Unexpected status: ${r.status}`);
+      const result = await r.json();
+      const rows = await Promise.all(Object.entries(result.data).map(lookUpAccount));
+      rows.sort((a, b) => b.totals.view - a.totals.view);
+      for (const row of rows) {
+        const a = row.account;
+        const name = a.username == a.display_name ? `@${a.username}` : a.display_name;
+        let email = '';
+        for (const identifier of a.identifiers) {
+          const match = identifier.match(/^email:([^/]+)\/(.+)/);
+          if (!match) continue;
+          email = `${match[2]}@${match[1]}`;
+          break;
+        }
+        html += '<tr class="table-warning">';
+        html += '<td>';
+        const emailParams = {
+          click_count: row.totals.view,
+          release_url: 'http://rcam.at/' + a.username,
+          to: email,
+          to_name: name,
+        };
+        const emailAttrs = Object.entries(emailParams)
+          .map(([k, v]) => `data-${k}="${escapeHTML(v.toLocaleString())}"`)
+          .join(' ');
+        html += `<a ${emailAttrs} href="action:email" title="${escapeHTML(email)}">${email ? '📫' : '📪'}</a> `;
+        html += `<strong><a href="/admin/accounts/${a.id}/" target="_blank">${escapeHTML(name)}</a></strong>`;
+        html += '</td>';
+        html += `<td class="text-right">${row.totals.view.toLocaleString()}</td>`;
+        const clicks = Object.entries(row.totals).map(([k, v]) => k == 'view' ? 0 : v).reduce((a, b) => a + b, 0);
+        html += `<td class="text-right">${clicks.toLocaleString()}</td>`;
+        html += '</tr>\n';
+
+        html += '<tr>';
+        html += '<td colspan="3">\n';
+        html += '<table class="table table-bordered table-hover table-sm">\n';
+        html += '<thead><tr>';
+        html += '<th>Release</th>';
+        html += '<th class="text-right" title="* All-time reactions" width="60">#R<em>*</em></th>'
+        for (const stat of stats) {
+          html += `<th class="text-center" colspan="2">${escapeHTML(stat.label)}</th>`;
+        }
+        html += '</tr></thead>\n';
+        for (const item of row.content) {
+          const c = item.content;
+          const title = c.properties.title_short || c.title;
+          html += '<tr>';
+          html += `<td><a href="/admin/content/${c.id}/" target="_blank">${escapeHTML(title)}</a></td>`;
+          html += `<td class="text-right"><a href="/admin/content/list/reaction/?sort=recent&related_to=${c.id}" target="_blank" title="* All-time reactions">${c.related_count.toLocaleString()}</a></td>`;
+          for (const values of getStatsValues(item.stats)) {
+            html += `<td class="text-right" title="${escapeHTML(values.tooltip || '')}" width="60">${values.count.toLocaleString()}</td>`;
+            if (values.uniques === undefined) {
+              html += '<td class="text-center text-muted" width="60">-</td>';
+            } else {
+              html += `<td class="text-right" width="60">${values.uniques.toLocaleString()}</td>`;
+            }
+          }
+          html += '</tr>\n';
+        }
+        html += '</table>\n';
+        html += '</td>';
+        html += '</tr>\n';
+      }
+      container.querySelector('tbody').innerHTML = html;
+    }
+
+    Array.from(document.querySelectorAll(`[${attr}]`)).forEach(initQuery);
+
+    const stats = [
+      {label: 'Views', id: 'view'},
+      {label: 'CTA', id: 'react'},
+      {label: 'YouTube', id: 'youtube'},
+      {label: 'Spotify', id: 'spotify'},
+      {
+        label: 'Others',
+        extract: i => sumStats(i, 'amazon', 'deezer', 'googleplay', 'itunes', 'soundcloud', 'tidal'),
+      },
+      {
+        label: 'Social',
+        extract: i => sumStats(i, 'facebook', 'instagram', 'snapchat', 'twitter'),
+      },
+    ];
+
+    function sumStats(info, ...ids) {
+      let count = 0, pieces = [];
+      for (const id of ids) {
+        count += info[id] ? info[id].count : 0;
+        pieces.push(`${id}: ${info[id] ? info[id].count : 0}`);
+      }
+      return {count, tooltip: pieces.join('\n')};
+    }
+
+    function getStatsValues(info) {
+      const defaultExtract = function (info) {
+        const v = info[this.id];
+        if (v) return {count: v.count, uniques: v.unique_count};
+        return {count: 0, uniques: 0};
+      };
+      return stats.map(stat => {
+        return (stat.extract || defaultExtract).call(stat, info);
+      });
+    }
+
+    document.body.addEventListener('click', e => {
+      if (e.target.href == 'action:email') {
+        e.preventDefault();
+        for (const [k, v] of Object.entries(e.target.dataset)) {
+          const e = document.getElementById(`email-${k}`);
+          if (!e) continue;
+          e.value = v;
+        }
+        document.getElementById('email-reaction_count').focus();
+        return;
+      }
+      if (['action:next', 'action:previous', 'action:refresh'].indexOf(e.target.href) === -1) return;
+      let t = e.target;
+      do {
+        if (t.dataset && t.dataset[prop]) break;
+      } while (t = t.parentNode);
+      if (!t) return;
+      const daysAgo = parseInt(t.dataset[prop]);
+      if (!Number.isInteger(daysAgo)) return;
+      e.preventDefault();
+      switch (e.target.href) {
+      case 'action:next':
+        if (daysAgo < 1) {
+          alert('Cannot go further into the future!');
+          return;
+        }
+        t.setAttribute(attr, (daysAgo - 1).toString());
+        break;
+      case 'action:previous':
+        t.setAttribute(attr, (daysAgo + 1).toString());
+        break;
+      case 'action:refresh':
+        runQuery(t);
+        break;
+      }
+    });
+    </script>
+  </body>
+</html>

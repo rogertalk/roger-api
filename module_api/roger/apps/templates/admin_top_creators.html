@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Top Creators</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="//code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha256-3edrmyuQ0w65f8gfBsqowzjJe2iM6n0nKciPUp8y+7E=" crossorigin="anonymous"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.bundle.min.js" integrity="sha384-feJI7QwhOS+hwpX2zkaeJQjeiwlhOP+SdQDqhgvvo1DsjtiSQByFdThsxO669S2D" crossorigin="anonymous"></script>
+    <style>
+    .avatar {
+      background-color: #fafafa;
+      background-position: 50% 50%;
+      background-size: cover;
+      border-radius: 9999px;
+      object-fit: cover;
+      position: relative;
+      transition: transform 200ms;
+      z-index: 1;
+    }
+    .avatar:hover {
+      transform: scale(2);
+      z-index: 2;
+    }
+    .verified a {
+      color: #08f;
+      text-shadow: #12bdff 0 0 10px;
+    }
+    .verified img {
+      box-shadow: #12bdff 0 0 10px;
+    }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <nav aria-label="breadcrumb" class="mt-5">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/admin/">Admin</a></li>
+          <li class="breadcrumb-item"><a href="/admin/accounts/">Accounts</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Top Creators</li>
+        </ol>
+      </nav>
+      <h1 class="display-4">Top Creators</h1>
+      <p class="lead">The currently configured (in <code>config.py</code>) list of top creators and their total reaction counts.</p>
+      <form class="mb-3">
+        <button class="btn btn-primary" name="recalculate" value="true">Recalculate</button>
+      </form>
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th class="text-right" scope="col" width="50">#</th>
+            <th class="text-center" scope="col" width="120">&nbsp;</th>
+            <th scope="col">Username</th>
+            <th scope="col" width="120">Status</th>
+            <th class="text-right" scope="col" width="110">Reactions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for account in accounts %}
+          {% if account %}
+          <tr{% if account.verified %} class="verified"{% endif %}>
+            <th class="text-right" scope="row">{{loop.index}}</th>
+            <td class="text-center"><img class="avatar" src="{{account.image_url}}" width="90" height="90"></td>
+            <td>
+              {% if account.display_name and account.display_name != account.username %}
+              <a href="/admin/accounts/{{account.key.id()}}/"><strong>{{account.display_name}}</strong></a><br>
+              @{{account.username}}
+              {% else %}
+              <a href="/admin/accounts/{{account.key.id()}}/">@{{account.username}}</a>
+              {% endif %}
+              <br><a href="http://rcam.at/{{account.username}}">http://rcam.at/{{account.username}}</a>
+            </td>
+            <td>
+              {{account.status}}
+              {% if account.properties and 'releases' in account.properties and account.properties['releases']|length > 0 %}
+              <br>{{account.properties['releases']|length}} release(s)
+              {% endif %}
+            </td>
+            <td class="text-right"><a href="/admin/content/list/original/?by={{account.key.id()}}">{{account.content_reaction_count|pretty}}</a></td>
+          </tr>
+          {% else %}
+          <tr class="table-danger"><td colspan="5">Invalid account id in this slot.</td></tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </main>
+  </body>
+</html>

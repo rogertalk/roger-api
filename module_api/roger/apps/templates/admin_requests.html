@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Public Requests</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="//code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha256-3edrmyuQ0w65f8gfBsqowzjJe2iM6n0nKciPUp8y+7E=" crossorigin="anonymous"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.bundle.min.js" integrity="sha384-feJI7QwhOS+hwpX2zkaeJQjeiwlhOP+SdQDqhgvvo1DsjtiSQByFdThsxO669S2D" crossorigin="anonymous"></script>
+    <style>
+    a[data-action] {
+      background: rgba(0, 0, 0, .05);
+      display: inline-block;
+      padding: 1px 0 0 4px;
+      border: transparent solid 1px;
+      border-radius: 9999px;
+    }
+    a[data-action]:hover {
+      border-color: rgba(0, 0, 0, .2);
+      text-decoration: none;
+    }
+    .coin {
+      vertical-align: text-bottom;
+    }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <nav aria-label="breadcrumb" class="mt-5">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/admin/">Admin</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Public Requests</li>
+        </ol>
+      </nav>
+      <h1 class="display-4">Manage public requests</h1>
+      <p class="lead">A list of public requests for content that have been made. If a request is sponsored, the Coin amount will show up. Approve/deny pending requests, and rearrange the order. You can also <a href="/admin/requests/new/">create a new request</a>.</p>
+      {% macro table(items) %}
+      <table class="table table-bordered table-hover">
+        <thead>
+          <tr>
+            <th>Content</th>
+            <th width="300">Requested by</th>
+            <th class="text-center" width="90">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for i in items %}
+          <tr{% if 'approved' not in i.request.tags %} class="text-muted"{% endif %} data-id="{{i.request.key.id()}}">
+            <td>
+              <strong><a href="/admin/requests/{{i.request.key.id()}}/">{% if i.title %}{{i.title}}{% else %}<em>Untitled</em>{% endif %}</a></strong>
+              {% if i.request.closed %}
+              <strong>(Closed)</strong>
+              {% elif i.entries_pending_review %}
+              <strong class="text-danger">({{i.entries_pending_review}} pending review)</strong>
+              {% endif %}
+              {% if i.subtitle %}<br><span>{{i.subtitle}}</span>{% endif %}
+              {% if i.request.properties %}<br><small><code>{{i.request.properties|pretty}}</code></small>{% endif %}
+            </td>
+            <td>
+              {{i.requested_by|emoji}}
+              <a href="/admin/accounts/{{i.requested_by.key.id()}}/">@{{i.requested_by.username|capped}}</a>
+              <br><span data-utc="{{i.request.requested|ms}}">{{i.request.requested}}</span>
+              <br>
+              {% if i.wallet %}
+              {% if i.request.closed %}
+              <span class="text-muted">{{i.wallet.balance|pretty}} <img alt="Coins" class="coin" src="/admin/static/coin.png" style="filter: grayscale(100%);" width="18" height="18" title="Coins"></span>
+              {% else %}
+              <strong>{{i.wallet.balance|pretty}} <img alt="Coins" class="coin" src="/admin/static/coin.png" width="18" height="18" title="Coins"></strong>
+              {% endif %}
+              {% endif %}
+              {% if i.entries_active %}
+              {% if i.wallet %}
+              ({{i.entries_active}} active)
+              {% else %}
+              {{i.entries_active}} active
+              {% endif %}
+              {% endif %}
+            </td>
+            <td class="text-center">
+              {% if 'approved' in i.request.tags %}
+              <!--a data-action="move-up" href="#" title="Move up in list">⬆️</a-->
+              <!--a data-action="move-down" href="#" title="Move down in list">⬇️</a-->
+              <a data-action="archive" href="#" title="Archive">📥</a>
+              {% elif 'archived' in i.request.tags %}
+              <a data-action="approve" href="#" title="Un-archive (set to approved)">📤</a>
+              {% elif 'pending' in i.request.tags %}
+              <a data-action="approve" href="#" title="Approve request">✅</a>
+              <a data-action="deny" href="#" title="Reject request">🚫</a>
+              {% endif %}
+              {% if i.request.closed %}
+              <a data-action="reopen" href="#" title="Reopen request">🔑</a>
+              {% elif 'approved' in i.request.tags or 'archived' in i.request.tags %}
+              <a data-action="close" href="#" title="Close request from receiving more entries">🔒</a>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% endmacro %}
+      <h2>Active requests</h2>
+      {{table(active_items)}}
+      <h2>Archived requests</h2>
+      {{table(archived_items)}}
+      <h2>Pending requests</h2>
+      {{table(pending_items)}}
+    </main>
+    <script>
+    document.body.addEventListener('click', e => {
+      if (e.target.nodeName != 'A') return;
+      const action = e.target.dataset.action;
+      if (!action) return;
+      const id = parseInt(e.target.parentNode.parentNode.dataset.id);
+      if (!Number.isInteger(id)) return;
+      e.preventDefault();
+      if (action == 'close') {
+        if (!confirm(`Are you sure you want to ${action} this request?`)) return;
+      }
+      const body = new FormData();
+      body.set('action', action);
+      fetch(`/admin/requests/${id}/`, {body, credentials: 'include', method: 'POST'})
+        .then(r => {
+          if (!r.ok) throw Error(r.status);
+          // TODO: Update without reloading page.
+          location.reload();
+        });
+    });
+    Array.from(document.querySelectorAll('[data-utc]')).forEach(node => {
+      node.textContent = new Date(parseInt(node.dataset.utc)).toLocaleString();
+    });
+    </script>
+  </body>
+</html>

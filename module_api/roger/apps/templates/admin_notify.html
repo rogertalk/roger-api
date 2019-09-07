@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Mass Notify</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  </head>
+  <body>
+    <div class="container">
+      <h1><a href="/admin/">Admin</a> » Mass Notify</h1>
+      <form action="/admin/notify" class="form-horizontal" method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+          <label class="col-sm-2 control-label">Title</label>
+          <div class="col-sm-10">
+            <input class="form-control" name="title">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="col-sm-2 control-label">Text</label>
+          <div class="col-sm-10">
+            <input class="form-control" name="text">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="col-sm-2 control-label">App Identifier</label>
+          <div class="col-sm-10">
+            <input class="form-control" name="app" placeholder="e.g., cam.reaction.ReactionCam">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="col-sm-2 control-label">Environment</label>
+          <div class="col-sm-10">
+            <select class="form-control" name="env">
+              <option value="">Production</option>
+              <option value="development">Development</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="col-sm-2 control-label">Tokens</label>
+          <div class="col-sm-10">
+            <input class="form-control" name="tokens" type="file">
+            <p class="help-block">File should be a list of tokens to notify (one per line).</p>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="col-sm-offset-2 col-sm-10">
+            <button class="btn btn-success btn-lg" type="submit">Send Notifications</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </body>
+</html>

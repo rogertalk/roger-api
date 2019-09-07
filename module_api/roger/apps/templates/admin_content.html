@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>{% if content_id %}{{title or 'Untitled'}}{% else %}Create content{% endif %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.css" integrity="sha256-CNwnGWPO03a1kOlAsGaH5g8P3dFaqFqqGFV/1nkX5OU=" crossorigin="anonymous">
+    <script src="//code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha256-3edrmyuQ0w65f8gfBsqowzjJe2iM6n0nKciPUp8y+7E=" crossorigin="anonymous"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.bundle.min.js" integrity="sha384-feJI7QwhOS+hwpX2zkaeJQjeiwlhOP+SdQDqhgvvo1DsjtiSQByFdThsxO669S2D" crossorigin="anonymous"></script>
+    <style>
+    video {
+      background: #eee;
+      border: #ccc solid 2px;
+    }
+    .avatar {
+      background-color: #fafafa;
+      background-position: 50% 50%;
+      background-size: cover;
+      border-radius: 9999px;
+      object-fit: cover;
+      position: relative;
+      transition: transform 200ms;
+      z-index: 1;
+    }
+    .avatar:hover {
+      transform: scale(6);
+      z-index: 2;
+    }
+    .bot-rating {
+      font-size: 40px;
+      line-height: 1;
+    }
+    .bot-rating span {
+      cursor: pointer;
+      display: inline-block;
+      padding: 2px;
+    }
+    .table > tbody > tr.reply > td {
+      padding-left: 35px;
+    }
+    .deleted {
+      background: #faa;
+      opacity: .6;
+    }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <nav aria-label="breadcrumb" class="mt-5">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/admin/">Admin</a></li>
+          <li class="breadcrumb-item"><a href="/admin/content/list/{{from_list}}/">{{from_list_tags|join('+')}}</a></li>
+          {% if by %}
+          <li class="breadcrumb-item"><a href="/admin/content/list/{{from_list}}/?by={{by.key.id()}}">By @{{by.username}}</a></li>
+          {% endif %}
+          <li class="breadcrumb-item active" aria-current="page">{% if content_id %}{{(title or 'Untitled')|capped}}{% else %}Create content{% endif %}</li>
+        </ol>
+      </nav>
+      <h1 class="display-4{% if content and 'deleted' in content.tags %} text-muted{% endif %}">{% if content_id %}{{title or 'Untitled'}}{% else %}Create content{% endif %}{% if content and 'deleted' in content.tags %} <strong class="text-danger">(DELETED)</strong>{% endif %}</h1>
+      <p class="lead">Manage the content metadata on this page.</p>
+      {% if video_url and (video_url.startswith('https://storage.googleapis.com/') or video_url.startswith('https://d32au24mly9y2n.cloudfront.net/') or video_url.startswith('https://s.reaction.cam/')) %}
+      {% if video_url.endswith('.m3u8') %}
+      <p><video autoplay controls height="360"></video></p>
+      <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+      <script>
+      const hls = new Hls();
+      hls.loadSource('{{video_url}}');
+      hls.attachMedia(document.querySelector('video'));
+      </script>
+      {% else %}
+      <p><video autoplay controls preload="metadata" src="{{video_url}}" height="360"></video></p>
+      {% endif %}
+      {% endif %}
+      {% if content and content.youtube_id_history %}
+      {% if content.youtube_id_history|length > 1 %}
+      <p class="text-danger">This video has been uploaded to YouTube more than once:</p>
+      <ul>
+        {% for vid in content.youtube_id_history %}
+        <li>
+          {% if loop.last %}
+          {% if vid %}
+          <strong><a href="http://youtu.be/{{vid}}" target="_blank" title="This is the currently associated YouTube video.">http://youtu.be/{{vid}}</a></strong>
+          {% if content.youtube_broken %}⚠️{% endif %}
+          {% if content.youtube_views %}({{content.youtube_views|pretty}} views){% endif %}
+          {% else %}
+          <strong>(Removed)</strong>
+          {% endif %}
+          {% else %}
+          <a href="http://youtu.be/{{vid}}" target="_blank">http://youtu.be/{{vid}}</a>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% elif content.youtube_id %}
+      <p>
+        Uploaded to YouTube:
+        <a href="http://youtu.be/{{content.youtube_id}}" target="_blank">http://youtu.be/{{content.youtube_id}}</a>
+        {% if content.youtube_broken %}⚠️{% endif %}
+        {% if content.youtube_views %}({{content.youtube_views|pretty}} views){% endif %}
+      </p>
+      {% endif %}
+      {% endif %}
+      {% if content and content.request %}
+      <p>🏆 This video was submitted as a <a href="/admin/requests/{{content.request.id()}}/#entries">public content request</a> entry.</p>
+      {% endif %}
+      {% if content_id %}
+      <p class="bot-rating" data-id="{{content_id}}"><span>🌑</span><span>🌑</span><span>🌑</span><span>🌑</span><span>🌑</span></p>
+      {% endif %}
+      {% if content %}
+      <p>Client used: <code>{{content.useragent}}</code></p>
+      {% endif %}
+      <form action="/admin/content/{% if content_id %}{{content_id}}/{% endif %}{% if from_list %}?from_list={{from_list|urlencode}}{% endif %}" method="POST" enctype="multipart/form-data">
+        {% if error %}
+        <div class="alert alert-danger" role="alert">
+          <h4 class="alert-heading">Ruh-roh! 😟</h4>
+          <p class="mb-0">{{error}}</p>
+        </div>
+        <hr>
+        {% endif %}
+        <h3>Relationships</h3>
+        {% if content_id %}
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">This Content’s Id</label>
+          <div class="col-sm-10">
+            <input type="text" readonly class="form-control-plaintext" value="{{content_id}}">
+            {% if content_id %}
+            <small class="form-text text-muted">
+              <a href="/admin/content/list/reaction/?related_to={{content_id}}">List reactions to this content ({{content.related_count|pretty}})</a>
+              {% if content.youtube_reaction_views %}
+              •
+              <span class="text-dark">{{content.youtube_reaction_views|pretty}} aggregate YouTube views (<a data-reactions-youtube-views-id="{{content_id}}" href="#">update</a>, <a data-reactions-youtube-views-repair-id="{{content_id}}" href="#" title="Repair count">repair</a>)</span>
+              {% elif content.related_count %}
+              •
+              <a data-reactions-youtube-views-id="{{content_id}}" href="#">Count aggregate YT views</a>
+              {% endif %}
+              •
+              <a data-recount-id="{{content_id}}" href="#">Force recount</a>
+              •
+              <a data-reindex-id="{{content_id}}" href="#">Refresh search index</a>
+            </small>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Creator Id</label>
+          <div class="col-sm-10">
+            <input name="creator-id" type="text" class="form-control" placeholder="1234567890" value="{{creator_id or ''}}">
+            <small class="form-text text-muted">
+              {% if by %}
+              Account: <a href="/admin/accounts/{{by.key.id()}}/">{{by.username}}</a>
+              {{by.account|emoji}}
+              {% if not by or by.id != config.ANONYMOUS_ID %}
+              (<a href="#" onclick="document.getElementsByName('creator-id')[0].value = '{{config.ANONYMOUS_ID}}'; return false;">Set to anonymous</a>)
+              {% endif %}
+              {% endif %}
+            </small>
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Reaction to Content</label>
+          <div class="col-sm-6">
+            <input id="related-to-id" name="related-to-id" type="text" class="form-control" placeholder="1234567890" value="{{related_to_id or ''}}">
+            {% if related_to_id %}
+            <small class="form-text text-muted">
+              <a href="/admin/content/{{related_to_id}}/{% if from_list %}?from_list={{from_list|urlencode}}{% endif %}">Go to related content page</a>
+              • <a class="text-danger" href="/admin/content/{{content_id}}/?unset_related=true{% if from_list %}&from_list={{from_list|urlencode}}{% endif %}">Remove "related to" connection</a>
+            </small>
+            {% else %}
+            <small class="form-text text-muted">Set this to point to original video.</small>
+            {% endif %}
+          </div>
+          <div class="col-sm-4">
+            <input id="related-to-id-search" type="text" class="form-control" placeholder="Search...">
+          </div>
+        </div>
+        <h3>Content information</h3>
+        {% if content %}
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Created</label>
+          <div class="col-sm-10">
+            <input name="created" type="text" class="form-control" placeholder="1970-01-01 00:00:00.000" value="{{content.created|datetimewithms}}">
+            <small class="form-text text-muted">Local time: <span data-utc="{{content.created|ms}}">{{content.created}}</span></small>
+          </div>
+        </div>
+        {% endif %}
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Title</label>
+          <div class="col-sm-10">
+            <input name="title" type="text" class="form-control" placeholder="Cool New Movie Trailer #2" value="{{title or ''}}">
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Slug</label>
+          <div class="col-sm-10">
+            <input name="slug" type="text" class="form-control" placeholder="cool-new-movie-trailer-2" value="{{slug or ''}}">
+            <small class="form-text text-muted">Should be unique.{% if content and content.slug %} <a href="https://www.reaction.cam/v/{{content.slug}}" target="_blank">Go to the web page</a> (opens in new tab).{% endif %}</small>
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Tags</label>
+          <div class="col-sm-10">
+            <input name="tags" type="text" class="form-control" placeholder="featured, funny, try not to laugh" value="{{tags}}">
+            {% if content and content.tags_history %}
+            <small class="form-text text-muted">Previously removed tags: {% for t in content.tags_history if t not in content.tags %}<code>{{t}}</code>{% else %}<em>none</em>{% endfor %}</small>
+            {% else %}
+            <small class="form-text text-muted">Comma-separated list of tags.</small>
+            {% endif %}
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Sort Index</label>
+          <div class="col-sm-10">
+            <div class="form-row">
+              <div class="col">
+                <input name="sort-index" type="text" class="form-control text-primary" placeholder="Index" value="{{sort_index or ''}}">
+              </div>
+              <div class="col">
+                <input name="sort-bonus" type="text" class="form-control text-success" placeholder="Bonus" value="{{sort_bonus or ''}}">
+              </div>
+              <div class="col">
+                <input name="sort-bonus-penalty" type="text" class="form-control text-danger" placeholder="Bonus penalty" value="{{sort_bonus_penalty or ''}}">
+              </div>
+            </div>
+            <small class="form-text text-muted">Content with a higher sort index will be shown first.{% if content %} Math: <span class="badge badge-dark" title="Sort index base">{{content.sort_base|pretty}}</span> + <span class="badge badge-success" title="Non-penalized bonus amount">{{content.sort_bonus|pretty}}</span> - <span class="badge badge-danger" title="Bonus penalty">{{content.sort_bonus_penalty|pretty}}</span> = <span class="badge badge-primary" title="Final sort index value">{{content.sort_index|pretty}}</span>{% endif %}</small>
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Thumbnail URL</label>
+          <div class="col-sm-10">
+            <input name="thumb-url" type="text" class="form-control" placeholder="https://i.ytimg.com/vi/ABcdEFGHIjK/hqdefault.jpg" value="{{thumb_url or ''}}">
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Original URL</label>
+          <div class="col-sm-10">
+            <input name="original-url" type="text" class="form-control" placeholder="https://www.youtube.com/watch?v=ABcdEFGHIjK" value="{{original_url or ''}}">
+            <small class="form-text text-muted">This is the page that will be opened by the app.{% if content and content.original_url %} <a href="{{content.original_url}}" target="_blank">Go to the original page</a> (opens in new tab).{% endif %}</small>
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Video URL</label>
+          <div class="col-sm-10">
+            <input name="video-url" type="text" class="form-control" placeholder="https://storage.googleapis.com/rcam/video.mp4" value="{{video_url or ''}}">
+            <small class="form-text text-muted">This will be a YouTube embed URL or a direct video link.</small>
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">YouTube Id{% if content.youtube_broken %} ⚠️{% endif %}</label>
+          <div class="col-sm-10">
+            <input name="youtube-id" type="text" class="form-control" placeholder="ABcdEFGHIjK" value="{{(content.youtube_id or '') if content else ''}}">
+            <small class="form-text text-muted">
+              The id of the YouTube version of this video (if it's a user video).
+              {% if content and content.youtube_views %}<a href="https://www.youtube.com/watch?v={{content.youtube_id}}" target="_blank">The video</a> has {{content.youtube_views|pretty}} views on YouTube.{% endif %}{% if content.youtube_broken %} <span class="text-danger">The video appears to have been taken down or removed.{% endif %}
+            </small>
+            {% if content and content.youtube_id %}
+            <small class="form-text text-muted">
+              <a data-youtube-views-id="{{content.key.id()}}" href="#">Update view count</a>
+              | <a data-forget-last-updated="{{content.key.id()}}" href="#">Forget last updated</a>
+            </small>
+            {% endif %}
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Duration (ms)</label>
+          <div class="col-sm-10">
+            <input name="video-duration" type="text" class="form-control" placeholder="120034" value="{{duration or ''}}">
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Views</label>
+          <div class="col-sm-10">
+            <input name="views" type="text" class="form-control" placeholder="{% if content %}{{content.views}} ({{content.views_real}}){% else %}{{views or 0}}{% endif %}">
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">👍</label>
+          <div class="col-sm-10">
+            <input name="votes" type="text" class="form-control" placeholder="{% if content %}{{content.votes}} ({{content.votes_real}}){% else %}{{votes or 0}}{% endif %}">
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Properties</label>
+          <div class="col-sm-10">
+            <p class="form-text"><pre id="properties-json">{{properties}}</pre></p>
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label">Update properties</label>
+          <div class="col-sm-10">
+            <textarea class="form-control" id="properties-field" name="properties" placeholder="{&quot;title_short&quot;: &quot;Hey You&quot;}" rows="3" style="font-family: monospace;">{}</textarea>
+            <p class="help-block">Enter JSON to merge into properties. For example, <code>{"title_short": "Hey You"}</code> will update the short title. Unset properties by setting value to <code>null</code>. <strong>Don’t specify all properties, only the ones you want to change!</strong></p>
+            <p><button class="btn btn-secondary" id="properties-unset" type="button">Unset all properties</button></p>
+          </div>
+        </div>
+        <script>
+        (function () {
+          const propsValue = document.getElementById('properties-json');
+          const propsField = document.getElementById('properties-field');
+          if (!propsValue || !propsField) return;
+          // Inject links and clickable property names in the prettified JSON output.
+          let html = propsValue.innerHTML;
+          const r1 = ($0, quot, url) => `${quot}<a href="${url}" target="_blank">${url}</a>${quot}`;
+          html = html.replace(/("|&#34;|&quot;)(https?:\/\/(?:(?!\1).)+)\1/g, r1);
+          const r2 = ($0, pre, $2, name, post) => `${pre}<a class="text-dark" data-set-property="${name}" href="#">${name}</a>${post}`;
+          html = html.replace(/^(\s*("|&#34;|&quot;))((?:(?!\2).)+)(\2:)/gm, r2);
+          console.log(html)
+          propsValue.innerHTML = html;
+          // Make clickable property names work.
+          const setProps = document.querySelectorAll('[data-set-property]');
+          for (const el of setProps) {
+            el.addEventListener('click', e => {
+              e.preventDefault();
+              e.stopPropagation();
+              const name = e.target.dataset.setProperty;
+              const o = {[name]: JSON.parse(propsValue.textContent)[name]};
+              propsField.value = JSON.stringify(o, null, '  ');
+            });
+          }
+          // Implement the "Unset all properties" button.
+          const unset = document.getElementById('properties-unset');
+          if (unset) {
+            unset.addEventListener('click', e => {
+              e.preventDefault();
+              e.stopPropagation();
+              let value = JSON.parse(propsValue.textContent);
+              value = Object.keys(value).reduce((o, k) => (o[k] = null) || o, {});
+              e.target.form.elements['properties'].value = JSON.stringify(value, null, '  ');
+            });
+          }
+        })();
+        </script>
+        <hr>
+        <div class="form-group row">
+          <div class="offset-sm-2 col-sm-10">
+            {% if not content_id %}
+            <button class="btn btn-success btn-lg" type="submit">Create!</button>
+            {% else %}
+            <button class="btn btn-warning btn-lg" type="submit">Update!</button>
+            {% endif %}
+          </div>
+        </div>
+        {% if content_id %}
+        <hr>
+        <h3>Comments</h3>
+        <table class="table table-bordered table-hover" data-content="{{content_id}}" id="comments">
+          <tbody></tbody>
+        </table>
+        <script>
+        const commentsTable = document.getElementById('comments');
+        const xhr = new XMLHttpRequest();
+        xhr.addEventListener('load', function () {
+          const result = JSON.parse(this.responseText);
+          if (!result.data.length) {
+            commentsTable.querySelector('tbody').innerHTML = '<tr><td>No comments yet.</td></tr>';
+          }
+          function fillRow(tr, comment) {
+            if (comment.reply_to) {
+              tr.classList.add('reply');
+            }
+            let html = '<td>';
+            html += `<img class="avatar" src="${comment.creator_image_url}" title="${new Date(comment.created)}" width="24" height="24"> `;
+            html += `<a href="/admin/accounts/${comment.creator_id}/">@${comment.creator_username}</a>`;
+            if (comment.offset >= 0) {
+              const s = Math.floor(comment.offset % 60000 / 1000);
+              html += ` (@${Math.floor(comment.offset / 60000)}:${s < 10 ? '0' + s : s}): `;
+            } else {
+              html += ': ';
+            }
+            html += comment.text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            html += '</td>';
+            html += '<td align="center" style="font-size: 17px;" width="40"><a class="delete" href="#">🗑</a></td>';
+            tr.innerHTML = html;
+          }
+          function getOrCreateRow(id, insertAfter) {
+            const htmlId = `comment-${id}`;
+            let tr = document.getElementById(htmlId);
+            if (!tr) {
+              tr = document.createElement('tr');
+              tr.dataset.id = id;
+              tr.id = htmlId;
+              tr.innerHTML = `<td>${id}</td>`;
+              const tbody = commentsTable.querySelector('tbody');
+              tbody.insertBefore(tr, insertAfter ? insertAfter.nextSibling : null);
+            }
+            return tr;
+          }
+          result.data.forEach(comment => {
+            let insertAfter;
+            if (comment.reply_to) {
+              insertAfter = getOrCreateRow(comment.reply_to);
+            }
+            const tr = getOrCreateRow(comment.id, insertAfter);
+            fillRow(tr, comment);
+          });
+        });
+        xhr.open('GET', '/admin/comments.json?content_id={{content_id}}');
+        xhr.send();
+        commentsTable.addEventListener('click', e => {
+          if (!e.target.classList.contains('delete')) return;
+          e.preventDefault();
+          e.stopPropagation();
+          const tr = e.target.parentNode.parentNode;
+          if (!confirm(`Delete?\n\n${tr.querySelector('td').textContent}`)) return;
+          tr.classList.add('deleted');
+          fetch(`/admin/comments.json?content_id={{content_id}}&comment_id=${tr.dataset.id}`, {method: 'DELETE', credentials: 'include'});
+        });
+        </script>
+        {% endif %}
+      </form>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <script src="/admin/static/bootstrap3-typeahead.min.js"></script>
+    <script>
+    $('#related-to-id-search').click(function () { $(this).val(''); }).typeahead({
+      afterSelect(item) {
+        if (!item) return;
+        $('#related-to-id').val(item.id);
+      },
+      delay: 500,
+      displayText(item) {
+        return item.title;
+      },
+      minLength: 2,
+      showHintOnFocus: true,
+      source(q, cb) {
+        fetch('https://api.reaction.cam/v53/content/search?query=' + escape(q))
+          .then(r => r.json())
+          .then(j => cb(j.data))
+          .catch(_ => cb([]));
+      },
+    });
+    const botRatings = document.querySelectorAll('.bot-rating');
+    botRatings.forEach(br => {
+      const children = Array.from(br.childNodes);
+      function setRating(rating) {
+        children.forEach((s, i) => {
+          s.textContent = (i < rating ? '🌝' : '🌑');
+        });
+      }
+      fetch('https://bn.reaction.cam/v1/rating?id=' + br.dataset.id)
+        .then(r => r.json())
+        .then(r => { setRating(r.rating); });
+      br.addEventListener('click', e => {
+        const rating = children.indexOf(e.target) + 1;
+        if (rating < 1) return;
+        setRating(rating);
+        fetch('https://bn.reaction.cam/v1/rate?id=' + br.dataset.id + '&rating=' + rating, {method: 'POST'});
+      });
+    });
+    Array.from(document.querySelectorAll('[data-utc]')).forEach(node => {
+      node.textContent = new Date(parseInt(node.dataset.utc)).toLocaleString();
+    });
+    function addJobSchedulerHandler(element, datasetKey, jobId, configureForm) {
+      const text = element.textContent;
+      let pending = false;
+      element.addEventListener('click', async function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (pending) return;
+        this.removeAttribute('href');
+        this.textContent = text + ' ⏱';
+        this.title = '';
+        pending = true;
+        try {
+          const body = new FormData();
+          await configureForm(body, this.dataset[datasetKey]);
+          const r = await fetch(`/_ah/jobs/${jobId}`, {method: 'POST', body, credentials: 'include'});
+          if (!r.ok) throw Error('Bad status: ' + r.statusText);
+          this.textContent = text + ' ✅';
+        } catch (e) {
+          console.error(e);
+          this.textContent = text + ' ⚠️';
+          this.title = `${e}`;
+        }
+        this.href = '#';
+        pending = false;
+      });
+    }
+    function setUpJobScheduler(dataAttribute, jobId, parameter, configureForm) {
+      const datasetKey = dataAttribute.replace(/-\w/g, t => t.substr(1).toUpperCase());
+      for (const element of document.querySelectorAll('[data-' + dataAttribute + ']')) {
+        addJobSchedulerHandler(element, datasetKey, jobId, parameter, configureForm);
+      }
+    }
+    setUpJobScheduler('forget-last-updated', 'forget_youtube_views_updated', (f, v) => f.set('content_id', v));
+    setUpJobScheduler('recount-id', 'recount_reactions', (f, v) => f.set('original_id', v));
+    setUpJobScheduler('reactions-youtube-views-id', 'update_youtube_views_batched', (f, v) => f.set('original_id', v));
+    setUpJobScheduler('reactions-youtube-views-repair-id', 'update_youtube_views_batched', (f, v) => {
+      f.set('original_id', v);
+      f.set('repair', 'true');
+    });
+    setUpJobScheduler('reindex-id', 'index_content', (f, v) => f.set('content_id', v));
+    setUpJobScheduler('youtube-views-id', 'update_youtube_views', (f, v) => f.set('content_id', v));
+    </script>
+  </body>
+</html>

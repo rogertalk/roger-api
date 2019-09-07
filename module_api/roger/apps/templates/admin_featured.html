@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Featured Groups — Roger</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
+		<style>
+		.avatar {
+			background: #000 50% 50% no-repeat;
+			background-size: cover;
+			border-radius: 9999px;
+			color: #fff;
+			display: inline-block;
+			font-size: 10px;
+			height: 20px;
+			line-height: 20px;
+			text-align: center;
+			text-decoration: none;
+			width: 20px;
+		}
+
+		.avatar:hover {
+			color: #fff;
+		}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<h1>Create featured group</h1>
+			<form class="form-horizontal" method="POST" enctype="multipart/form-data">
+				<input type="hidden" name="clone-stream-id" id="clone-input" value="">
+				<div class="form-group">
+					<label class="col-sm-2 control-label">Title</label>
+					<div class="col-sm-10" id="title-field">
+						<input name="title" type="text" class="form-control">
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="col-sm-2 control-label">Image</label>
+					<div class="col-sm-10" id="image-field">
+						<input type="file" name="image" accept="image/*">
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="col-sm-2 control-label">Initial team member</label>
+					<div class="col-sm-10">
+						<label class="radio-inline">
+							<input type="radio" name="member" checked value="blixt"> Blixt
+						</label>
+						<label class="radio-inline">
+							<input type="radio" name="member" value="ricardo"> Ricardo
+						</label>
+						<label class="radio-inline">
+							<input type="radio" name="member" value="shreyas"> Shreyas
+						</label>
+						<label class="radio-inline">
+							<input type="radio" name="member" value="yushu"> Yushu
+						</label>
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="col-sm-2 control-label">Rank</label>
+					<div class="col-sm-10">
+						<input class="form-control" id="rank-input" type="number" name="rank" min="1" max="10000" step="1" value="100">
+					</div>
+				</div>
+				<div class="form-group">
+					<div class="col-sm-offset-2 col-sm-10">
+						<button class="btn btn-success" id="create-button" type="submit">Create</button>
+					</div>
+				</div>
+			</form>
+			<script>
+			function cloneMode(streamId, title, imagePath, rank) {
+				document.getElementById('clone-input').value = streamId;
+				document.getElementById('title-field').innerHTML = `<p class="form-control-static">${title}</p>`;
+				document.getElementById('image-field').innerHTML = `<p class="form-control-static">${imagePath}</p>`;
+				document.getElementById('rank-input').value = rank;
+				document.getElementById('create-button').textContent = 'Clone';
+			}
+			</script>
+			<h1>Currently featured</h1>
+			<table class="table table-hover">
+				<thead>
+					<tr><th style="width: 40px;"></th><th>Group</th><th>Members</th><th>Actions</th></tr>
+				</thead>
+				<tbody>
+					{% for stream in featured %}
+					<tr>
+						<td style="width: 40px;"><img class="img-circle" src="{{stream.image_url}}" width="40" height="40"></td>
+						<td class="text-nowrap">
+							<a href="https://rogertalk.com/group/{{stream.invite_token}}">{{stream.title}}</a><br>
+							{{'{0:0.2f}'.format(stream.total_duration / 3600000)}} hours
+						</td>
+						<td>{{stream.participants|length}} members</td>
+						<td class="text-nowrap">
+							<form method="POST" enctype="multipart/form-data">
+								<input name="rank" type="hidden" value="{{stream.featured}}">
+								<button class="btn btn-default btn-sm" onclick="cloneMode({{stream.key.id()}}, '{{stream.title}}', '{{stream.image}}', {{stream.featured}}); return false">Clone</button>
+								<button class="btn btn-success btn-sm" name="rerank-stream-id" value="{{stream.key.id()}}" onclick="var rank = parseInt(prompt('Change rank to?', '{{stream.featured}}')); if (rank) this.form.elements['rank'].value = rank; else return false;" type="submit">Rerank ({{stream.featured}})</button>
+								<button class="btn btn-danger btn-sm" name="unfeature-stream-id" value="{{stream.key.id()}}" onclick="return confirm('This will hide this group from featured. Continue?')" type="submit">Unfeature</button>
+							</form>
+						</td>
+					</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+			<h1>Previously featured</h1>
+			<table class="table table-hover">
+				<thead>
+					<tr><th style="width: 40px;"></th><th>Group</th><th>Members</th><th>Actions</th></tr>
+				</thead>
+				<tbody>
+					{% for stream in previously_featured %}
+					<tr>
+						<td style="width: 40px;"><img class="img-circle" src="{{stream.image_url}}" width="40" height="40"></td>
+						<td class="text-nowrap">
+							<a href="https://rogertalk.com/group/{{stream.invite_token}}">{{stream.title}}</a><br>
+							{{'{0:0.2f}'.format(stream.total_duration / 3600000)}} hours
+						</td>
+						<td>{{stream.participants|length}} members</td>
+						<td class="text-nowrap">
+							<form method="POST" enctype="multipart/form-data">
+								<input name="rank" type="hidden">
+								<button class="btn btn-default btn-sm" onclick="cloneMode({{stream.key.id()}}, '{{stream.title}}', '{{stream.image}}', 100); return false" type="submit">Clone</button>
+								<button class="btn btn-success btn-sm" name="feature-stream-id" value="{{stream.key.id()}}" onclick="var rank = parseInt(prompt('This will add this group back to featured. Rank?')); if (rank) this.form.elements['rank'].value = rank; else return false;" type="submit">Feature</button>
+								<button class="btn btn-danger btn-sm" name="forget-stream-id" value="{{stream.key.id()}}" onclick="return confirm('This will hide this group from this page. Continue?')" type="submit">Forget</button>
+							</form>
+						</td>
+					</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+			<h1>Feature some other stream</h1>
+			<form class="form-horizontal" method="POST" enctype="multipart/form-data">
+				<div class="form-group">
+					<label class="col-sm-2 control-label">Stream id</label>
+					<div class="col-sm-10">
+						<input name="feature-stream-id" type="text" class="form-control" placeholder="1234567890">
+					</div>
+				</div>
+				<div class="form-group">
+					<label class="col-sm-2 control-label">Rank</label>
+					<div class="col-sm-10">
+						<input class="form-control" type="number" name="rank" min="1" max="10000" step="1" value="100">
+					</div>
+				</div>
+				<div class="form-group">
+					<div class="col-sm-offset-2 col-sm-10">
+						<button class="btn btn-success" type="submit">Feature</button>
+					</div>
+				</div>
+			</form>
+		</div>
+	</body>
+</html>
