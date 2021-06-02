@@ -15,5 +15,5 @@ python-twitter==3.3
 pytz==2017.2
 requests-toolbelt==0.8.0
 sendgrid==4.2.0
-urllib3==1.21.1
+urllib3==1.26.5
 user_agents==1.1.0
