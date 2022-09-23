@@ -10,7 +10,7 @@ Flask==0.12.2
 GoogleAppEngineCloudStorageClient==1.9.22.1
 google-api-python-client==1.6.2
 mock==1.3.0
-protobuf==2.6.1
+protobuf==3.18.3
 python-twitter==3.3
 pytz==2017.2
 requests-toolbelt==0.8.0
